@@ -8,7 +8,7 @@ import { getExercise, deleteExercise } from '@/lib/firebase/firestore';
 import { ExerciseForm } from '@/components/exercises/ExerciseForm';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import { formatDurationCompact } from '@/lib/utils/formatters';
+// formatDurationCompact available if needed
 import type { Exercise } from '@/lib/types';
 
 export default function ExerciseDetailPage() {

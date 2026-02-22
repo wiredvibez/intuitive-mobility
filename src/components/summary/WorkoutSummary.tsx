@@ -30,8 +30,6 @@ export function WorkoutSummary() {
     routineId,
     routineName,
     completedBlocks,
-    modifications,
-    skippedBlocks,
     resetPlayer,
   } = usePlayerStore();
 

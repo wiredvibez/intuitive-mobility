@@ -2,14 +2,14 @@
 
 import { Reorder } from 'motion/react';
 import { RoutineBlockCard } from './RoutineBlockCard';
-import type { LoopBlock as LoopBlockType, ExerciseBlock, BreakBlock } from '@/lib/types';
+import type { LoopBlock as LoopBlockType, ExerciseBlock, BreakBlock, Exercise } from '@/lib/types';
 
 interface LoopBlockProps {
   loop: LoopBlockType;
   onUpdate: (loop: LoopBlockType) => void;
   onRemove: () => void;
   onAddExercise: (insertAfterIndex?: number) => void;
-  exerciseDataMap: Map<string, any>;
+  exerciseDataMap: Map<string, Exercise>;
 }
 
 export function LoopBlockComponent({

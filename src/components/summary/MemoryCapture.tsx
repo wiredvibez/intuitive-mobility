@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { motion } from 'motion/react';
 
 interface CapturedMedia {
   id: string;

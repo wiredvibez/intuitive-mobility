@@ -5,7 +5,7 @@ import { Reorder, useDragControls } from 'motion/react';
 import { AnimatePresence } from 'motion/react';
 import { BlockConfigInline } from './BlockConfigInline';
 import { formatDurationCompact } from '@/lib/utils/formatters';
-import type { ExerciseBlock, BreakBlock, RoutineBlock } from '@/lib/types';
+import type { ExerciseBlock, BreakBlock, Exercise } from '@/lib/types';
 import { BREAK_DURATION_PRESETS } from '@/lib/types';
 
 interface RoutineBlockCardProps {
@@ -151,7 +151,7 @@ export function RoutineBlockCard({
         <AnimatePresence>
           {editing && exerciseData && (
             <BlockConfigInline
-              exercise={exerciseData as any}
+              exercise={exerciseData as Exercise}
               initialReps={exBlock.reps}
               initialDuration={exBlock.duration_secs}
               onConfirm={({ reps, duration_secs }) => {

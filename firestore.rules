@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users: Own data only
+    match /users/{userId} {
+      allow read, write: if request.auth != null 
+                         && request.auth.uid == userId;
+      
+      // Routines: Private subcollection
+      match /routines/{routineId} {
+        allow read, write: if request.auth != null 
+                           && request.auth.uid == userId;
+      }
+      
+      // Active workouts: Private subcollection
+      match /workouts/{workoutId} {
+        allow read, write: if request.auth != null 
+                           && request.auth.uid == userId;
+      }
+      
+      // Archive: Private subcollection
+      match /archive/{archiveId} {
+        allow read, write: if request.auth != null 
+                           && request.auth.uid == userId;
+      }
+    }
+    
+    // Exercises: Public read (if is_public), author write
+    match /exercises/{exerciseId} {
+      allow read: if request.auth != null 
+                  && (resource.data.is_public == true 
+                      || resource.data.author_id == request.auth.uid);
+      allow create: if request.auth != null 
+                    && request.resource.data.author_id == request.auth.uid;
+      allow update, delete: if request.auth != null 
+                            && resource.data.author_id == request.auth.uid;
+    }
+  }
+}

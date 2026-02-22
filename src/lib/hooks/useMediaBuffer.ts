@@ -42,7 +42,8 @@ export function useMediaBuffer(blocks: FlatBlock[], currentIndex: number) {
       blocks.slice(Math.max(0, startIdx - 1), endIdx).map((b) => b.id)
     );
 
-    for (const [id, url] of blobUrlsRef.current) {
+    const entries = Array.from(blobUrlsRef.current.entries());
+    for (const [id, url] of entries) {
       if (!activeIds.has(id) && url.startsWith('blob:')) {
         URL.revokeObjectURL(url);
         blobUrlsRef.current.delete(id);
@@ -54,12 +55,13 @@ export function useMediaBuffer(blocks: FlatBlock[], currentIndex: number) {
 
   // Cleanup on unmount
   useEffect(() => {
+    const urls = blobUrlsRef.current;
     return () => {
-      for (const url of blobUrlsRef.current.values()) {
+      Array.from(urls.values()).forEach((url) => {
         if (url.startsWith('blob:')) {
           URL.revokeObjectURL(url);
         }
-      }
+      });
     };
   }, []);
 

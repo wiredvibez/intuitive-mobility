@@ -8,7 +8,7 @@ import { deleteRoutine } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { formatDuration, formatDurationCompact } from '@/lib/utils/formatters';
-import type { RoutineBlock, ExerciseBlock, BreakBlock, LoopBlock } from '@/lib/types';
+import type { RoutineBlock, ExerciseBlock, LoopBlock } from '@/lib/types';
 
 function BlockListItem({ block, depth = 0 }: { block: RoutineBlock; depth?: number }) {
   const ml = depth > 0 ? 'ml-4' : '';
