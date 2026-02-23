@@ -248,7 +248,7 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
         <label className="block text-sm font-medium text-fg-muted">Media</label>
 
         {mediaPreview ? (
-          <div className="relative rounded-xl overflow-hidden bg-bg-elevated aspect-video">
+          <div className="relative rounded-xl overflow-hidden bg-bg-elevated aspect-[9/16] max-w-[200px] mx-auto">
             {mediaType === 'video' ? (
               <video
                 src={mediaPreview}
@@ -279,7 +279,7 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full aspect-video rounded-xl border-2 border-dashed border-border hover:border-fg-subtle flex flex-col items-center justify-center gap-2 text-fg-muted transition-colors"
+            className="w-full aspect-[9/16] max-w-[200px] mx-auto rounded-xl border-2 border-dashed border-border hover:border-fg-subtle flex flex-col items-center justify-center gap-2 text-fg-muted transition-colors"
           >
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />

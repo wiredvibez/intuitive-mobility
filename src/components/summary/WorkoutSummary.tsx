@@ -92,36 +92,40 @@ export function WorkoutSummary() {
     setSaving(true);
 
     try {
-      // Upload memory media
+      const allSkipped = completedCount === 0;
+
+      // Upload memory media (only if we're saving to archive)
       const memoryMedia: { url: string; type: 'photo' | 'video' }[] = [];
       const memoryPaths: string[] = [];
 
-      for (const capture of captures) {
-        const fileName = `${capture.id}.${capture.type === 'photo' ? 'jpg' : 'webm'}`;
-        const { url, path } = await uploadMemoryMedia(
-          firebaseUser.uid,
-          workoutId,
-          capture.blob,
-          fileName
-        );
-        memoryMedia.push({ url, type: capture.type });
-        memoryPaths.push(path);
-      }
+      if (!allSkipped) {
+        for (const capture of captures) {
+          const fileName = `${capture.id}.${capture.type === 'photo' ? 'jpg' : 'webm'}`;
+          const { url, path } = await uploadMemoryMedia(
+            firebaseUser.uid,
+            workoutId,
+            capture.blob,
+            fileName
+          );
+          memoryMedia.push({ url, type: capture.type });
+          memoryPaths.push(path);
+        }
 
-      // Create archive entry
-      await createArchiveEntry(firebaseUser.uid, {
-        workout_id: workoutId,
-        routine_id: routineId,
-        routine_name: routineName,
-        custom_name: customName || routineName,
-        completed_at: Timestamp.now(),
-        completion_type: 'completed',
-        total_duration_secs: totalDuration,
-        blocks_completed: completedBlocks,
-        modifications_applied: modsHandled,
-        memory_media: memoryMedia,
-        memory_media_paths: memoryPaths,
-      });
+        // Create archive entry only when at least one block was completed
+        await createArchiveEntry(firebaseUser.uid, {
+          workout_id: workoutId,
+          routine_id: routineId,
+          routine_name: routineName,
+          custom_name: customName || routineName,
+          completed_at: Timestamp.now(),
+          completion_type: 'completed',
+          total_duration_secs: totalDuration,
+          blocks_completed: completedBlocks,
+          modifications_applied: modsHandled,
+          memory_media: memoryMedia,
+          memory_media_paths: memoryPaths,
+        });
+      }
 
       // Clean up active workout
       await deleteWorkout(firebaseUser.uid, workoutId);
@@ -132,7 +136,7 @@ export function WorkoutSummary() {
       // Clean up preview URLs
       captures.forEach((c) => URL.revokeObjectURL(c.previewUrl));
 
-      addToast('Workout saved!', 'success');
+      addToast(allSkipped ? 'Workout cleared' : 'Workout saved!', 'success');
       router.push('/dashboard');
     } catch (err) {
       console.error('Failed to save workout:', err);

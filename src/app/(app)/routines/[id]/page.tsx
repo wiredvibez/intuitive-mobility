@@ -142,8 +142,8 @@ export default function RoutineDetailPage() {
         </div>
       </div>
 
-      {/* Bottom actions */}
-      <div className="fixed bottom-0 left-0 right-0 bg-bg-card/95 backdrop-blur-md border-t border-border p-4 pb-safe-b z-30">
+      {/* Bottom actions - positioned above BottomNav (h-14) */}
+      <div className="fixed left-0 right-0 bg-bg-card/95 backdrop-blur-md border-t border-border p-4 z-30 bottom-14 pb-safe-b">
         <div className="max-w-app mx-auto space-y-2">
           <Button fullWidth onClick={() => router.push(`/workout/${routine.id}`)}>
             Start Workout

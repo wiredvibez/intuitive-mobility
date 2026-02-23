@@ -6,7 +6,7 @@ import { motion } from 'motion/react';
 import { usePlayerStore } from '@/lib/stores/playerStore';
 import { useUIStore } from '@/lib/stores/uiStore';
 import { useAuth } from '@/providers/AuthProvider';
-import { updateWorkoutState } from '@/lib/firebase/firestore';
+import { updateWorkoutState, deleteWorkout } from '@/lib/firebase/firestore';
 import { MediaPlayer } from './MediaPlayer';
 import { PlayerTimer } from './PlayerTimer';
 import { PlayerControls } from './PlayerControls';
@@ -33,6 +33,7 @@ export function WorkoutPlayer() {
     tick,
     getCurrentBlock,
     getNextBlocks,
+    resetPlayer,
   } = usePlayerStore();
 
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -104,6 +105,18 @@ export function WorkoutPlayer() {
     pause();
     await saveState();
     setHideBottomNav(false);
+    setShowExitConfirm(false);
+    router.push('/dashboard');
+  };
+
+  const handleDiscard = async () => {
+    if (!firebaseUser || !workoutId) return;
+    pause();
+    await deleteWorkout(firebaseUser.uid, workoutId);
+    resetPlayer();
+    setHideBottomNav(false);
+    setShowExitConfirm(false);
+    addToast('Workout discarded', 'info');
     router.push('/dashboard');
   };
 
@@ -166,7 +179,7 @@ export function WorkoutPlayer() {
       {/* Media */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
         {currentBlock?.type === 'exercise' && currentBlock.media_url ? (
-          <div className="w-full max-w-xs aspect-square rounded-2xl overflow-hidden">
+          <div className="w-full max-w-[200px] aspect-[9/16] rounded-2xl overflow-hidden">
             <MediaPlayer
               mediaUrl={currentBlock.media_url}
               mediaType={currentBlock.media_type}
@@ -211,7 +224,7 @@ export function WorkoutPlayer() {
       </div>
 
       {/* Up Next */}
-      <div className="px-4 pb-6 pb-safe-b">
+      <div className="px-4 pb-10 pb-safe-b">
         <UpNextQueue blocks={nextBlocks} />
       </div>
 
@@ -229,20 +242,28 @@ export function WorkoutPlayer() {
           >
             <h3 className="text-lg font-semibold text-center">Leave workout?</h3>
             <p className="text-sm text-fg-muted text-center">
-              Your progress will be saved and you can resume later.
+              Save and resume later, or discard this workout.
             </p>
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowExitConfirm(false)}
+                  className="flex-1 py-3 rounded-xl bg-bg-elevated text-sm font-medium"
+                >
+                  Stay
+                </button>
+                <button
+                  onClick={handleExit}
+                  className="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-medium"
+                >
+                  Save & Leave
+                </button>
+              </div>
               <button
-                onClick={() => setShowExitConfirm(false)}
-                className="flex-1 py-3 rounded-xl bg-bg-elevated text-sm font-medium"
+                onClick={handleDiscard}
+                className="w-full py-3 rounded-xl border border-danger/50 text-danger text-sm font-medium hover:bg-danger/10"
               >
-                Stay
-              </button>
-              <button
-                onClick={handleExit}
-                className="flex-1 py-3 rounded-xl bg-danger text-white text-sm font-medium"
-              >
-                Leave
+                Discard
               </button>
             </div>
           </motion.div>

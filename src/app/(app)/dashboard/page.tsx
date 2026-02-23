@@ -66,9 +66,16 @@ export default function DashboardPage() {
 
   const handleDiscardWorkout = async () => {
     if (!firebaseUser || !activeWorkout) return;
-    await deleteWorkout(firebaseUser.uid, activeWorkout.id);
-    setActiveWorkout(null);
-    addToast('Workout discarded', 'info');
+    const workoutId = activeWorkout.id;
+    setActiveWorkout(null); // Optimistic: hide banner immediately
+    try {
+      await deleteWorkout(firebaseUser.uid, workoutId);
+      addToast('Workout discarded', 'info');
+    } catch (err) {
+      console.error('Failed to discard workout:', err);
+      addToast('Failed to discard workout', 'error');
+      setActiveWorkout(activeWorkout); // Restore if delete failed
+    }
   };
 
   return (

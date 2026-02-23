@@ -53,7 +53,7 @@ export default function ExercisesPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {exercises.map((ex) => (
             <ExerciseCard
               key={ex.id}

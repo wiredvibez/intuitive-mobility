@@ -204,12 +204,34 @@ export async function deleteWorkout(userId: string, workoutId: string) {
 }
 
 // ── Archive Operations ────────────────────────────────────
+/** Remove undefined values (Firestore rejects them) */
+function sanitizeForFirestore<T>(obj: T): T {
+  if (obj === undefined) return obj;
+  if (obj === null) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map((item) =>
+      item === undefined ? null : sanitizeForFirestore(item)
+    ) as T;
+  }
+  if (typeof obj === 'object' && obj !== null) {
+    const result = {} as Record<string, unknown>;
+    for (const [k, v] of Object.entries(obj)) {
+      if (v !== undefined) {
+        result[k] = sanitizeForFirestore(v);
+      }
+    }
+    return result as T;
+  }
+  return obj;
+}
+
 export async function createArchiveEntry(
   userId: string,
   data: Omit<ArchiveEntry, 'id'>
 ): Promise<string> {
   const ref = doc(collection(db, 'users', userId, 'archive'));
-  await setDoc(ref, { id: ref.id, ...data });
+  const sanitized = sanitizeForFirestore({ id: ref.id, ...data });
+  await setDoc(ref, sanitized);
   return ref.id;
 }
 

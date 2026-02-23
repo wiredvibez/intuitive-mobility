@@ -314,29 +314,29 @@ export function RoutineBuilder({ routine }: RoutineBuilderProps) {
         </div>
       </div>
 
-      {/* Bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-bg-card/95 backdrop-blur-md border-t border-border p-4 pb-safe-b z-30">
+      {/* Bottom bar - positioned above BottomNav (h-14) */}
+      <div className="fixed left-0 right-0 bg-bg-card/95 backdrop-blur-md border-t border-border p-4 z-30 bottom-14 pb-safe-b">
         <div className="max-w-app mx-auto space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-fg-muted">
+          <div className="flex items-center justify-between gap-3 min-w-0">
+            <span className="text-sm text-fg-muted shrink-0">
               Total: <strong className="text-foreground">{formatDuration(totalDuration)}</strong>
             </span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-1.5 justify-end min-w-0">
               <button
                 onClick={() => openPicker()}
-                className="px-3 py-1.5 text-xs font-medium text-accent bg-accent/10 rounded-lg hover:bg-accent/20 transition-colors"
+                className="px-2.5 py-1.5 text-xs font-medium text-accent bg-accent/10 rounded-lg hover:bg-accent/20 transition-colors whitespace-nowrap shrink-0"
               >
                 + Exercise
               </button>
               <button
                 onClick={addBreak}
-                className="px-3 py-1.5 text-xs font-medium text-fg-muted bg-bg-elevated rounded-lg hover:bg-border transition-colors"
+                className="px-2.5 py-1.5 text-xs font-medium text-fg-muted bg-bg-elevated rounded-lg hover:bg-border transition-colors whitespace-nowrap shrink-0"
               >
                 + Break
               </button>
               <button
                 onClick={addLoop}
-                className="px-3 py-1.5 text-xs font-medium text-fg-muted bg-bg-elevated rounded-lg hover:bg-border transition-colors"
+                className="px-2.5 py-1.5 text-xs font-medium text-fg-muted bg-bg-elevated rounded-lg hover:bg-border transition-colors whitespace-nowrap shrink-0"
               >
                 + Loop
               </button>

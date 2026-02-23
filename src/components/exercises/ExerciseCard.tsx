@@ -14,14 +14,10 @@ export function ExerciseCard({ exercise, onSelect, compact = false }: ExerciseCa
     <motion.button
       whileTap={{ scale: 0.95 }}
       onClick={() => onSelect?.(exercise)}
-      className={`
-        flex flex-col rounded-xl overflow-hidden bg-bg-card border border-border
-        text-left transition-colors hover:border-fg-subtle
-        ${compact ? 'aspect-square' : ''}
-      `}
+      className="flex flex-col text-left transition-colors group"
     >
-      {/* Media thumbnail */}
-      <div className={`relative bg-bg-elevated ${compact ? 'flex-1' : 'aspect-square'} w-full overflow-hidden`}>
+      {/* Portrait preview card */}
+      <div className="relative rounded-xl overflow-hidden bg-bg-card border border-border aspect-[9/16] w-full transition-colors group-hover:border-fg-subtle">
         {exercise.media_url ? (
           exercise.media_type === 'video' ? (
             <video
@@ -55,10 +51,8 @@ export function ExerciseCard({ exercise, onSelect, compact = false }: ExerciseCa
         </div>
       </div>
 
-      {/* Name */}
-      <div className="px-2 py-1.5">
-        <p className="text-xs font-medium truncate">{exercise.name}</p>
-      </div>
+      {/* Exercise name floating below the preview card */}
+      <p className="mt-2 text-xs font-medium truncate text-foreground">{exercise.name}</p>
     </motion.button>
   );
 }
