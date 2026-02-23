@@ -9,6 +9,7 @@ import { StepOne } from '@/components/onboarding/StepOne';
 import { StepTwo } from '@/components/onboarding/StepTwo';
 import { Spinner } from '@/components/ui/Spinner';
 import type { ReferralSource } from '@/lib/types';
+import { EXERCISE_CHIPS } from '@/lib/types';
 
 export default function OnboardingPage() {
   const { firebaseUser, loading: authLoading, refreshProfile } = useAuth();

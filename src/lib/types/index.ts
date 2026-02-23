@@ -11,6 +11,7 @@ export interface UserProfile {
   referral_source: ReferralSource;
   referral_source_other?: string;
   preferences?: Record<string, unknown>;
+  tags?: string[];
   createdAt: Timestamp;
 }
 
