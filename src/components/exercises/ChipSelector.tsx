@@ -58,7 +58,7 @@ export function ChipSelector({
     }
   };
 
-  const displayChips = [...new Set([...chips, ...selected])];
+  const displayChips = Array.from(new Set([...chips, ...selected]));
 
   return (
     <div className="flex flex-wrap gap-2">
