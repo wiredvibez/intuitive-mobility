@@ -153,9 +153,9 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
   const selectionWidth = duration > 0 ? (maxClip / duration) * 100 : 100;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden max-h-[100dvh]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border">
         <button onClick={onCancel} className="text-fg-muted hover:text-foreground p-1">
           ✕
         </button>
@@ -164,7 +164,7 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
       </div>
 
       {/* Video preview */}
-      <div className="flex-1 flex items-center justify-center p-4 bg-black">
+      <div className="flex-1 min-h-0 flex items-center justify-center p-4 bg-black overflow-hidden">
         <video
           ref={videoRef}
           src={videoUrl}
@@ -178,7 +178,7 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
       </div>
 
       {/* Timeline */}
-      <div className="px-4 py-4 space-y-3">
+      <div className="flex-shrink-0 px-4 py-4 space-y-3">
         <div
           ref={timelineRef}
           onPointerDown={handlePointerDown}
