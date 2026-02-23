@@ -44,13 +44,16 @@ export default function OnboardingPage() {
   ) => {
     setSaving(true);
     try {
-      await createUser(firebaseUser.uid, {
+      const userData: Parameters<typeof createUser>[1] = {
         name,
         email: firebaseUser.email || '',
         phone: `+972${phone}`,
         referral_source: source,
-        referral_source_other: otherText,
-      });
+      };
+      if (otherText !== undefined && otherText !== '') {
+        userData.referral_source_other = otherText;
+      }
+      await createUser(firebaseUser.uid, userData);
       await refreshProfile();
       router.replace('/dashboard');
     } catch (err) {
