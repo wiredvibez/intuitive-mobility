@@ -50,6 +50,7 @@ export default function OnboardingPage() {
         email: firebaseUser.email || '',
         phone: `+972${phone}`,
         referral_source: source,
+        tags: [...EXERCISE_CHIPS],
       };
       if (otherText !== undefined && otherText !== '') {
         userData.referral_source_other = otherText;

@@ -3,6 +3,8 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/providers/AuthProvider';
+import { updateUser } from '@/lib/firebase/firestore';
+import { EXERCISE_CHIPS } from '@/lib/types';
 import { useUIStore } from '@/lib/stores/uiStore';
 import { createExercise, updateExercise } from '@/lib/firebase/firestore';
 import { uploadExerciseMedia } from '@/lib/firebase/storage';
@@ -25,7 +27,7 @@ interface ExerciseFormProps {
 }
 
 export function ExerciseForm({ exercise }: ExerciseFormProps) {
-  const { firebaseUser } = useAuth();
+  const { firebaseUser, profile, refreshProfile } = useAuth();
   const router = useRouter();
   const addToast = useUIStore((s) => s.addToast);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -203,7 +205,22 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
       {/* Chips */}
       <div className="space-y-1.5">
         <label className="block text-sm font-medium text-fg-muted">Tags</label>
-        <ChipSelector selected={chips} onChange={setChips} />
+        <ChipSelector
+          selected={chips}
+          onChange={setChips}
+          chips={profile?.tags?.length ? profile.tags : EXERCISE_CHIPS}
+          onAddTag={
+            firebaseUser
+              ? async (tag) => {
+                  const current = profile?.tags ?? [...EXERCISE_CHIPS];
+                  await updateUser(firebaseUser.uid, {
+                    tags: [...current, tag],
+                  });
+                  await refreshProfile();
+                }
+              : undefined
+          }
+        />
       </div>
 
       {/* Privacy */}
