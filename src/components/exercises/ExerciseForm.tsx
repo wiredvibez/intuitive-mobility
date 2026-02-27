@@ -41,6 +41,7 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
     exercise?.default_time_per_rep_secs?.toString() || '2'
   );
   const [chips, setChips] = useState<string[]>(exercise?.chips || []);
+  const [twoSided, setTwoSided] = useState(exercise?.two_sided ?? false);
   const [isPublic, setIsPublic] = useState(exercise?.is_public ?? false);
   const [mediaFile, setMediaFile] = useState<File | Blob | null>(null);
   const [mediaPreview, setMediaPreview] = useState(exercise?.media_url || '');
@@ -71,6 +72,7 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
       exChips.some((c) => !chipsSet.has(c))
     )
       return true;
+    if (twoSided !== (exercise?.two_sided ?? false)) return true;
     if (isPublic !== (exercise?.is_public ?? false)) return true;
     if (mediaFile) return true;
     return false;
@@ -80,6 +82,7 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
     type,
     timePerRep,
     chips,
+    twoSided,
     isPublic,
     mediaFile,
     exercise,
@@ -145,17 +148,22 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
         finalMediaUrl = upload.url;
       }
 
-      const data = {
+      const data: Record<string, unknown> = {
         author_id: firebaseUser.uid,
         name: name.trim(),
         description: description.trim(),
         type,
-        default_time_per_rep_secs: type === 'repeat' ? parseInt(timePerRep) : undefined,
         media_url: finalMediaUrl,
         media_type: mediaType,
         chips,
+        two_sided: twoSided,
         is_public: isPublic,
       };
+
+      // Only include default_time_per_rep_secs for repeat exercises
+      if (type === 'repeat') {
+        data.default_time_per_rep_secs = parseInt(timePerRep);
+      }
 
       if (exercise) {
         await updateExercise(exercise.id, data);
@@ -225,7 +233,7 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
               onClick={() => setType(t)}
               className={`
                 flex-1 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5
-                ${type === t ? 'bg-accent text-white' : 'text-fg-muted hover:text-foreground'}
+                ${type === t ? 'bg-accent text-accent-fg' : 'text-fg-muted hover:text-foreground'}
               `}
             >
               {t === 'repeat' ? <RepeatIcon size={16} /> : <TimerIcon size={16} />}
@@ -247,6 +255,29 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
           min={1}
         />
       )}
+
+      {/* Two-sided toggle */}
+      <div className="flex items-center justify-between py-2">
+        <div>
+          <span className="text-sm font-medium text-foreground">Two-sided</span>
+          <p className="text-xs text-fg-muted">Add to routine for both left and right</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setTwoSided(!twoSided)}
+          className={`
+            relative shrink-0 w-12 h-6 rounded-full transition-colors overflow-visible
+            ${twoSided ? 'bg-accent' : 'bg-bg-elevated border border-border'}
+          `}
+        >
+          <span
+            className={`
+              absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform
+              ${twoSided ? 'translate-x-6' : 'translate-x-0'}
+            `}
+          />
+        </button>
+      </div>
       </section>
 
       <section className="space-y-4">

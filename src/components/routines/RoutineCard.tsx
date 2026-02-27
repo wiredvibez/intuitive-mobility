@@ -16,15 +16,26 @@ export function RoutineCard({ routine, onClick }: RoutineCardProps) {
     <motion.button
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="w-full text-left bg-bg-card border border-border rounded-xl p-4 transition-colors hover:border-fg-subtle"
+      className="w-full text-left bg-bg-card rounded-2xl px-5 py-4 transition-all hover:bg-bg-elevated active:bg-bg-elevated"
     >
-      <h3 className="font-semibold text-sm mb-1.5 truncate">
-        {routine.name}
-      </h3>
-      <div className="flex items-center gap-3 text-xs text-fg-muted">
-        <span>{exerciseCount} exercise{exerciseCount !== 1 ? 's' : ''}</span>
-        <span className="text-fg-subtle">·</span>
-        <span>{formatDurationCompact(routine.total_duration_secs)}</span>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-display font-bold text-xl leading-tight truncate text-foreground">
+            {routine.name}
+          </h3>
+          <p className="text-xs text-fg-muted mt-1">
+            {formatDurationCompact(routine.total_duration_secs)}
+          </p>
+        </div>
+
+        <div className="shrink-0 text-right">
+          <span className="font-display font-bold text-4xl leading-none text-accent">
+            {exerciseCount}
+          </span>
+          <p className="text-[10px] text-fg-subtle mt-0.5 uppercase tracking-wide">
+            {exerciseCount !== 1 ? 'moves' : 'move'}
+          </p>
+        </div>
       </div>
     </motion.button>
   );

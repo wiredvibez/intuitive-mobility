@@ -112,18 +112,52 @@ export function RoutineBuilder({ routine }: RoutineBuilderProps) {
 
     const mediaUrl = await getExerciseMediaUrl(exercise);
 
-    const newBlock: ExerciseBlock = {
-      id: uuid(),
-      type: 'exercise',
-      exercise_id: exercise.id,
-      exercise_name: exercise.name,
-      exercise_description: exercise.description,
-      media_url: mediaUrl,
-      media_type: exercise.media_type,
-      exercise_type: exercise.type,
-      duration_secs: config.duration_secs,
-      reps: config.reps,
-    };
+    // Create blocks - two for two-sided exercises (right first, then left)
+    const blocksToAdd: ExerciseBlock[] = [];
+
+    if (exercise.two_sided) {
+      // Add right side first
+      blocksToAdd.push({
+        id: uuid(),
+        type: 'exercise',
+        exercise_id: exercise.id,
+        exercise_name: exercise.name,
+        exercise_description: exercise.description,
+        media_url: mediaUrl,
+        media_type: exercise.media_type,
+        exercise_type: exercise.type,
+        duration_secs: config.duration_secs,
+        reps: config.reps,
+        side: 'right',
+      });
+      // Add left side second
+      blocksToAdd.push({
+        id: uuid(),
+        type: 'exercise',
+        exercise_id: exercise.id,
+        exercise_name: exercise.name,
+        exercise_description: exercise.description,
+        media_url: mediaUrl,
+        media_type: exercise.media_type,
+        exercise_type: exercise.type,
+        duration_secs: config.duration_secs,
+        reps: config.reps,
+        side: 'left',
+      });
+    } else {
+      blocksToAdd.push({
+        id: uuid(),
+        type: 'exercise',
+        exercise_id: exercise.id,
+        exercise_name: exercise.name,
+        exercise_description: exercise.description,
+        media_url: mediaUrl,
+        media_type: exercise.media_type,
+        exercise_type: exercise.type,
+        duration_secs: config.duration_secs,
+        reps: config.reps,
+      });
+    }
 
     if (loopId) {
       setBlocks((prev) =>
@@ -131,7 +165,7 @@ export function RoutineBuilder({ routine }: RoutineBuilderProps) {
           if (b.type === 'loop' && b.id === loopId) {
             const newBlocks = [...b.blocks];
             const idx = targetIndex != null ? targetIndex + 1 : newBlocks.length;
-            newBlocks.splice(idx, 0, newBlock);
+            newBlocks.splice(idx, 0, ...blocksToAdd);
             return { ...b, blocks: newBlocks };
           }
           return b;
@@ -141,7 +175,7 @@ export function RoutineBuilder({ routine }: RoutineBuilderProps) {
       setBlocks((prev) => {
         const newBlocks = [...prev];
         const idx = targetIndex != null ? targetIndex + 1 : newBlocks.length;
-        newBlocks.splice(idx, 0, newBlock);
+        newBlocks.splice(idx, 0, ...blocksToAdd);
         return newBlocks;
       });
     }
@@ -242,6 +276,17 @@ export function RoutineBuilder({ routine }: RoutineBuilderProps) {
           </select>
         </div>
 
+        {/* Empty state — shown between prep and cooldown when no blocks */}
+        {blocks.length === 0 && (
+          <button
+            onClick={() => openPicker()}
+            className="w-full py-10 flex flex-col items-center gap-2 border border-dashed border-border hover:border-accent/50 rounded-2xl transition-colors group"
+          >
+            <span className="text-2xl font-display font-bold text-fg-subtle group-hover:text-accent transition-colors">+</span>
+            <span className="text-sm text-fg-muted group-hover:text-accent transition-colors">Add an exercise</span>
+          </button>
+        )}
+
         {/* Block list */}
         <Reorder.Group
           axis="y"
@@ -271,6 +316,9 @@ export function RoutineBuilder({ routine }: RoutineBuilderProps) {
                 onUpdate={(updated) => updateBlock(index, updated)}
                 onRemove={() => removeBlock(index)}
                 onAddBelow={() => openPicker(index)}
+                onAddBefore={
+                  block.type === 'break' ? () => openPicker(index - 1) : undefined
+                }
                 exerciseData={
                   block.type === 'exercise'
                     ? exerciseDataMap.get((block as ExerciseBlock).exercise_id)

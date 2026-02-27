@@ -74,7 +74,7 @@ export function ChipSelector({
               transition-colors border
               ${
                 active
-                  ? 'bg-accent text-white border-accent'
+                  ? 'bg-accent text-accent-fg border-accent'
                   : 'bg-bg-elevated text-fg-muted border-border hover:border-fg-subtle'
               }
             `}

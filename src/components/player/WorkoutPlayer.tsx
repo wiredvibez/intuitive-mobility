@@ -141,6 +141,7 @@ export function WorkoutPlayer() {
     return null;
   }
 
+  const sideLabel = currentBlock?.side === 'right' ? 'Right Side' : currentBlock?.side === 'left' ? 'Left Side' : null;
   const blockLabel =
     currentBlock?.type === 'exercise'
       ? currentBlock.exercise_name
@@ -199,7 +200,14 @@ export function WorkoutPlayer() {
         )}
 
         {/* Block name */}
-        <h2 className="text-xl font-bold text-center">{blockLabel}</h2>
+        <div className="text-center">
+          <h2 className="text-xl font-bold">{blockLabel}</h2>
+          {sideLabel && (
+            <span className="inline-block mt-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-accent/15 text-accent">
+              {sideLabel}
+            </span>
+          )}
+        </div>
 
         {/* Description for exercise blocks */}
         {currentBlock?.type === 'exercise' && currentBlock.exercise_description && (

@@ -21,7 +21,6 @@ export default function DashboardPage() {
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [checkingWorkout, setCheckingWorkout] = useState(true);
 
-  // Check for active/stale workouts
   useEffect(() => {
     if (!firebaseUser) return;
     const check = async () => {
@@ -36,7 +35,6 @@ export default function DashboardPage() {
         const minutesSince = (Date.now() - lastActive.getTime()) / 1000 / 60;
 
         if (minutesSince > 30) {
-          // Auto-complete stale workout
           await createArchiveEntry(firebaseUser.uid, {
             workout_id: workout.id,
             routine_id: workout.routine_id,
@@ -67,35 +65,42 @@ export default function DashboardPage() {
   const handleDiscardWorkout = async () => {
     if (!firebaseUser || !activeWorkout) return;
     const workoutId = activeWorkout.id;
-    setActiveWorkout(null); // Optimistic: hide banner immediately
+    setActiveWorkout(null);
     try {
       await deleteWorkout(firebaseUser.uid, workoutId);
       addToast('Workout discarded', 'info');
     } catch (err) {
       console.error('Failed to discard workout:', err);
       addToast('Failed to discard workout', 'error');
-      setActiveWorkout(activeWorkout); // Restore if delete failed
+      setActiveWorkout(activeWorkout);
     }
   };
 
   return (
-    <div className="px-4 pt-6">
+    <div className="px-4 pt-8 pb-4">
       {/* Greeting */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold">
-          {profile?.name || 'Hey'}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="mb-8"
+      >
+        <p className="text-fg-subtle text-sm mb-0.5">Ready to train,</p>
+        <h1 className="font-display font-bold text-5xl leading-none tracking-tight">
+          {profile?.name || 'Athlete'}
         </h1>
-      </div>
+      </motion.div>
 
       {/* Active workout banner */}
       {activeWorkout && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-4 p-4 bg-accent/10 border border-accent/30 rounded-xl"
+          className="mb-6 p-4 bg-accent/10 border border-accent/25 rounded-2xl"
         >
-          <p className="text-sm font-medium mb-2">
-            Continue {activeWorkout.custom_name}?
+          <p className="text-sm font-semibold mb-3">
+            Resume{' '}
+            <span className="text-accent">{activeWorkout.custom_name}</span>?
           </p>
           <div className="flex gap-2">
             <Button
@@ -118,20 +123,31 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* Routines section */}
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-fg-muted uppercase tracking-wider">
-          My Routines
-        </h2>
+      {/* Routines section header */}
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-display font-bold text-2xl">Routines</h2>
+        {!loading && !checkingWorkout && routines.length > 0 && (
+          <button
+            onClick={() => router.push('/routines/new')}
+            className="text-accent text-sm font-semibold hover:text-accent-hover transition-colors"
+          >
+            + New
+          </button>
+        )}
       </div>
 
       {loading || checkingWorkout ? (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-16">
           <Spinner />
         </div>
       ) : routines.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-bg-elevated flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="flex flex-col items-center justify-center py-16 text-center gap-5"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-bg-card flex items-center justify-center">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-fg-subtle">
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <line x1="12" y1="8" x2="12" y2="16" />
@@ -139,31 +155,43 @@ export default function DashboardPage() {
             </svg>
           </div>
           <div>
-            <p className="text-sm text-fg-muted mb-1">No routines yet</p>
-            <p className="text-xs text-fg-subtle">Build your first workout routine</p>
+            <p className="font-display font-bold text-xl mb-1">No routines yet</p>
+            <p className="text-sm text-fg-muted">Build your first workout to get moving</p>
           </div>
           <Button onClick={() => router.push('/routines/new')}>
             Create Routine
           </Button>
-        </div>
+        </motion.div>
       ) : (
-        <div className="space-y-2">
-          {routines.map((routine) => (
-            <RoutineCard
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.05 }}
+          className="space-y-2"
+        >
+          {routines.map((routine, i) => (
+            <motion.div
               key={routine.id}
-              routine={routine}
-              onClick={() => router.push(`/routines/${routine.id}`)}
-            />
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+            >
+              <RoutineCard
+                routine={routine}
+                onClick={() => router.push(`/routines/${routine.id}`)}
+              />
+            </motion.div>
           ))}
-          <Button
-            variant="secondary"
-            fullWidth
-            onClick={() => router.push('/routines/new')}
-            className="mt-4"
-          >
-            + New Routine
-          </Button>
-        </div>
+          <div className="pt-2">
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => router.push('/routines/new')}
+            >
+              + New Routine
+            </Button>
+          </div>
+        </motion.div>
       )}
     </div>
   );

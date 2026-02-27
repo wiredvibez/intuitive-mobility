@@ -1,12 +1,18 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Barlow_Condensed, DM_Sans } from 'next/font/google';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { ToastProvider } from '@/providers/ToastProvider';
 import './globals.css';
 
-const inter = Inter({
+const barlowCondensed = Barlow_Condensed({
+  weight: ['400', '500', '600', '700', '800'],
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-display',
+});
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
 });
 
 export const metadata: Metadata = {
@@ -25,7 +31,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: 'cover',
-  themeColor: '#0a0a0a',
+  themeColor: '#0D0D0B',
 };
 
 export default function RootLayout({
@@ -34,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${barlowCondensed.variable} ${dmSans.variable}`}>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
       </head>

@@ -28,6 +28,7 @@ export function ImportReviewPlayer({ job: initialJob, onComplete }: ImportReview
   const [type, setType] = useState<'repeat' | 'timed'>('repeat');
   const [timePerRep, setTimePerRep] = useState('2');
   const [chips, setChips] = useState<string[]>([]);
+  const [twoSided, setTwoSided] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const pendingExercises = job.exercises.filter((e) => e.status === 'pending');
@@ -44,6 +45,7 @@ export function ImportReviewPlayer({ job: initialJob, onComplete }: ImportReview
         String(currentExercise.default_time_per_rep_secs ?? 2)
       );
       setChips(currentExercise.chips ?? []);
+      setTwoSided(currentExercise.two_sided ?? false);
     }
   }, [currentExercise]);
 
@@ -64,6 +66,7 @@ export function ImportReviewPlayer({ job: initialJob, onComplete }: ImportReview
           type,
           default_time_per_rep_secs: type === 'repeat' ? parseInt(timePerRep, 10) : undefined,
           chips,
+          two_sided: twoSided,
         },
       });
       addToast('Exercise added', 'success');
@@ -188,7 +191,7 @@ export function ImportReviewPlayer({ job: initialJob, onComplete }: ImportReview
                   type="button"
                   onClick={() => setType(t)}
                   className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                    type === t ? 'bg-accent text-white' : 'text-fg-muted hover:text-foreground'
+                    type === t ? 'bg-accent text-accent-fg' : 'text-fg-muted hover:text-foreground'
                   }`}
                 >
                   {EXERCISE_TYPE_LABELS[t]}
@@ -205,6 +208,29 @@ export function ImportReviewPlayer({ job: initialJob, onComplete }: ImportReview
               min={1}
             />
           )}
+          {/* Two-sided toggle */}
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <span className="text-sm font-medium text-foreground">Two-sided</span>
+              <p className="text-xs text-fg-muted">Do both left and right sides</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTwoSided(!twoSided)}
+              className={`
+                relative shrink-0 w-12 h-6 rounded-full transition-colors overflow-visible
+                ${twoSided ? 'bg-accent' : 'bg-bg-elevated border border-border'}
+              `}
+            >
+              <span
+                className={`
+                  absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform
+                  ${twoSided ? 'translate-x-6' : 'translate-x-0'}
+                `}
+              />
+            </button>
+          </div>
+
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-fg-muted">Tags</label>
             <ChipSelector

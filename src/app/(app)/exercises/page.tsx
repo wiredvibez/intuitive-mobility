@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'motion/react';
 import { useExercises } from '@/lib/hooks/useExercises';
 import { usePendingVideoImports } from '@/lib/hooks/usePendingVideoImports';
 import { ExerciseCard } from '@/components/exercises/ExerciseCard';
@@ -22,7 +23,33 @@ export default function ExercisesPage() {
   };
 
   return (
-    <div className="px-4 pt-4">
+    <div className="px-4 pt-8">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="mb-6"
+      >
+        <h1 className="font-display font-bold text-5xl leading-none tracking-tight mb-5">
+          Exercises
+        </h1>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowImportSheet(true)}
+            className="flex-1 py-2.5 rounded-xl bg-bg-card border border-border text-sm font-medium text-fg-muted hover:border-fg-subtle hover:text-foreground transition-colors"
+          >
+            Import
+          </button>
+          <button
+            onClick={() => router.push('/exercises/new')}
+            className="flex-1 py-2.5 rounded-xl bg-accent text-accent-fg text-sm font-bold hover:bg-accent-hover transition-colors"
+          >
+            + Create
+          </button>
+        </div>
+      </motion.div>
+
       {/* Pending imports */}
       {pendingImports.length > 0 && (
         <div className="mb-4 space-y-2">
@@ -32,27 +59,6 @@ export default function ExercisesPage() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-bold">My Exercises</h1>
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => setShowImportSheet(true)}
-            className="!py-2 !px-3 !text-xs"
-          >
-            Import
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => router.push('/exercises/new')}
-            className="!py-2 !px-3 !text-xs"
-          >
-            + New
-          </Button>
-        </div>
-      </div>
-
       <ImportInstagramSheet
         open={showImportSheet}
         onClose={() => setShowImportSheet(false)}
@@ -60,12 +66,17 @@ export default function ExercisesPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-16">
           <Spinner />
         </div>
       ) : exercises.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-bg-elevated flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="flex flex-col items-center justify-center py-16 text-center gap-5"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-bg-card flex items-center justify-center">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-fg-subtle">
               <path d="M6.5 6.5h11M6.5 17.5h11" />
               <rect x="2" y="8.5" width="4" height="7" rx="1" />
@@ -74,24 +85,40 @@ export default function ExercisesPage() {
             </svg>
           </div>
           <div>
-            <p className="text-sm text-fg-muted mb-1">No exercises yet</p>
-            <p className="text-xs text-fg-subtle">Create your first exercise to get started</p>
+            <p className="font-display font-bold text-xl mb-1">No exercises yet</p>
+            <p className="text-sm text-fg-muted">Create or import your first exercise</p>
           </div>
-          <Button onClick={() => router.push('/exercises/new')}>
-            Create Exercise
-          </Button>
-        </div>
+          <div className="flex gap-2 w-full max-w-[240px]">
+            <Button variant="secondary" className="flex-1 !text-xs" onClick={() => setShowImportSheet(true)}>
+              Import
+            </Button>
+            <Button className="flex-1 !text-xs" onClick={() => router.push('/exercises/new')}>
+              Create
+            </Button>
+          </div>
+        </motion.div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {exercises.map((ex) => (
-            <ExerciseCard
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.05 }}
+          className="grid grid-cols-2 sm:grid-cols-3 gap-4"
+        >
+          {exercises.map((ex, i) => (
+            <motion.div
               key={ex.id}
-              exercise={ex}
-              onSelect={handleSelect}
-              compact
-            />
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.03 }}
+            >
+              <ExerciseCard
+                exercise={ex}
+                onSelect={handleSelect}
+                compact
+              />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );

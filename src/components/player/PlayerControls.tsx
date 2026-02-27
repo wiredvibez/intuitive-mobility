@@ -30,7 +30,7 @@ export function PlayerControls({
       <motion.button
         whileTap={{ scale: 0.9 }}
         onClick={onPlayPause}
-        className="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-white shadow-lg shadow-accent/30"
+        className="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-accent-fg shadow-lg shadow-accent/30"
       >
         {isPlaying ? (
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">

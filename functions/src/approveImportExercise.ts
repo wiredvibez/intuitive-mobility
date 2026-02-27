@@ -70,22 +70,31 @@ export async function approveImportExercise(
     // ignore
   }
 
-  await exerciseRef.set({
+  const twoSided = (edits.two_sided as boolean) ?? false;
+
+  const exerciseData: Record<string, unknown> = {
     id: exerciseId,
     author_id: userId,
     name,
     description,
     type,
-    default_time_per_rep_secs: type === 'repeat' ? defaultTimePerRep : undefined,
     media_url: '', // Client resolves via media_storage_path
     media_storage_path: destRef,
     media_type: 'video',
     chips,
     is_public: false,
+    two_sided: twoSided,
     credit: credit ?? null,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
+  };
+
+  // Only include default_time_per_rep_secs for repeat exercises
+  if (type === 'repeat' && defaultTimePerRep != null) {
+    exerciseData.default_time_per_rep_secs = defaultTimePerRep;
+  }
+
+  await exerciseRef.set(exerciseData);
 
   exercises[idx] = {
     ...item,

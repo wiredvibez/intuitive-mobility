@@ -76,6 +76,8 @@ interface AIExerciseItem {
   chips: string[];
   timestamp_start: number;
   timestamp_end: number;
+  /** True if exercise is unilateral and should be done on both sides */
+  two_sided?: boolean;
 }
 
 interface AIAnalysisResult {
@@ -158,6 +160,29 @@ function parseMetadata(ytdlpInfo: Record<string, unknown>, url: string): Instagr
   };
 }
 
+function normalizeInstagramUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    u.search = '';
+    u.hash = '';
+    return u.pathname.replace(/\/+$/, '');
+  } catch {
+    return url.replace(/[?#].*$/, '').replace(/\/+$/, '');
+  }
+}
+
+function extractJsonFromResponse(text: string): Record<string, unknown> {
+  // Strip markdown code fences if present
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const cleaned = fenceMatch ? fenceMatch[1].trim() : text.trim();
+
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('No JSON found in AI response');
+  }
+  return JSON.parse(jsonMatch[0]);
+}
+
 function mapChipsToRegistry(chips: string[]): string[] {
   const lower = EXERCISE_CHIPS.map((c) => c.toLowerCase());
   return chips
@@ -175,6 +200,7 @@ const FITNESS_SYSTEM_PROMPT = `You are a fitness video analyzer. Watch the video
 1. Is this a FITNESS video? (exercise, workout, movement, training content)
 2. Does it show at least ONE clearly demonstrated exercise?
 3. If yes, list each exercise with precise timestamps (start and end in seconds) and full metadata.
+4. Determine if each exercise is "two_sided" - meaning it's a unilateral movement that should be performed on both left and right sides (e.g., single-leg exercises, one-arm movements, lateral stretches, lunges, single-leg deadlifts, side planks).
 
 Output ONLY valid JSON matching this schema:
 {
@@ -189,7 +215,8 @@ Output ONLY valid JSON matching this schema:
       "default_time_per_rep_secs": number (for repeat, seconds per rep),
       "chips": ["string"] (from: Core, Arms, Legs, Cardio, Stretch, Balance, Back, Chest, Shoulders, Full Body),
       "timestamp_start": number (seconds),
-      "timestamp_end": number (seconds)
+      "timestamp_end": number (seconds),
+      "two_sided": boolean (true if unilateral - should be done on both left and right sides)
     }
   ]
 }`;
@@ -236,8 +263,8 @@ export async function processVideoImportPipeline(
     const userSnap = await getDb().collection('users').doc(userId).get();
     const userData = userSnap.data();
     const analyzed = (userData?.analyzed_video_urls as string[]) || [];
-    const normalizedUrl = instagramUrl.replace(/\/$/, '');
-    if (analyzed.some((u) => u.replace(/\/$/, '') === normalizedUrl)) {
+    const normalizedUrl = normalizeInstagramUrl(instagramUrl);
+    if (analyzed.some((u) => normalizeInstagramUrl(u) === normalizedUrl)) {
       const logId = await createAnalysisLog({
         jobId,
         userId,
@@ -356,11 +383,7 @@ Return the JSON schema.`;
         { text: `${FITNESS_SYSTEM_PROMPT}\n\n${userPrompt}` },
       ]);
       const text = result.response.text();
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON in response');
-      }
-      analysis = JSON.parse(jsonMatch[0]) as AIAnalysisResult;
+      analysis = extractJsonFromResponse(text) as unknown as AIAnalysisResult;
     } catch (parseErr) {
       const msg = parseErr instanceof Error ? parseErr.message : 'Analysis failed';
       const logId = await createAnalysisLog({
@@ -402,6 +425,9 @@ Return the JSON schema.`;
     await updateJob(jobId, { status: 'analyzed' });
 
     // 5. Cut clips with ffmpeg
+    if (!ffmpegPath) {
+      throw new Error('ffmpeg binary not found');
+    }
     fs.mkdirSync(clipsDir, { recursive: true });
     const clipPaths: string[] = [];
     const storageRefClips: string[] = [];
@@ -447,15 +473,16 @@ Return the JSON schema.`;
 
     const exercises = analysis.exercises.map((ex, i) => ({
       index: i,
-      name: ex.name,
+      name: ex.name || 'Unnamed exercise',
       description: ex.description || '',
       type: ex.type || 'repeat',
-      default_time_per_rep_secs: ex.default_time_per_rep_secs,
+      default_time_per_rep_secs: ex.default_time_per_rep_secs ?? null,
       chips: mapChipsToRegistry(ex.chips || []),
       timestamp_start: ex.timestamp_start,
       timestamp_end: ex.timestamp_end,
       media_url: signedUrls[i] || null,
       status: 'pending' as const,
+      two_sided: ex.two_sided ?? false,
     }));
 
     // Add URL to user's analyzed list

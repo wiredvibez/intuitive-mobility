@@ -17,12 +17,14 @@ const config: Config = {
         'fg-subtle': 'var(--color-fg-subtle)',
         accent: 'var(--color-accent)',
         'accent-hover': 'var(--color-accent-hover)',
+        'accent-fg': 'var(--color-accent-fg)',
         border: 'var(--color-border)',
         danger: 'var(--color-danger)',
         success: 'var(--color-success)',
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'system-ui', 'sans-serif'],
       },
       maxWidth: {
         app: '480px',

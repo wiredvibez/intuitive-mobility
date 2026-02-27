@@ -13,6 +13,7 @@ interface RoutineBlockCardProps {
   onUpdate: (block: ExerciseBlock | BreakBlock) => void;
   onRemove: () => void;
   onAddBelow: () => void;
+  onAddBefore?: () => void;
   isNew?: boolean;
   exerciseData?: {
     name: string;
@@ -30,6 +31,7 @@ export function RoutineBlockCard({
   onUpdate,
   onRemove,
   onAddBelow,
+  onAddBefore,
   isNew = false,
   exerciseData,
 }: RoutineBlockCardProps) {
@@ -44,6 +46,14 @@ export function RoutineBlockCard({
         dragControls={dragControls}
         className="mb-2"
       >
+        {onAddBefore && (
+          <button
+            onClick={onAddBefore}
+            className="w-full py-1.5 mb-1.5 text-[11px] font-medium text-accent/60 hover:text-accent border border-dashed border-border hover:border-accent/40 rounded-lg transition-colors"
+          >
+            + Exercise
+          </button>
+        )}
         <div className="bg-bg-card border border-border rounded-xl overflow-hidden">
           <div className="flex items-center gap-3 px-3 py-2.5">
             <button
@@ -126,7 +136,14 @@ export function RoutineBlockCard({
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{exBlock.exercise_name}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-medium truncate">{exBlock.exercise_name}</p>
+              {exBlock.side && (
+                <span className="shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded bg-accent/15 text-accent uppercase">
+                  {exBlock.side === 'right' ? 'R' : 'L'}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-fg-muted">
               {exBlock.reps ? `${exBlock.reps} reps · ` : ''}
               {formatDurationCompact(exBlock.duration_secs)}

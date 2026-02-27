@@ -15,6 +15,12 @@ function getBlockLabel(block: FlatBlock): string {
   return 'Block';
 }
 
+function getSideLabel(block: FlatBlock): string | null {
+  if (block.side === 'right') return 'R';
+  if (block.side === 'left') return 'L';
+  return null;
+}
+
 function getBlockColor(block: FlatBlock): string {
   if (block.type === 'exercise') return 'border-accent/40';
   if (block.type === 'break') return 'border-fg-subtle/30';
@@ -38,7 +44,14 @@ export function UpNextQueue({ blocks }: UpNextQueueProps) {
               ${getBlockColor(block)}
             `}
           >
-            <p className="text-[10px] font-medium truncate">{getBlockLabel(block)}</p>
+            <div className="flex items-center justify-center gap-1">
+              <p className="text-[10px] font-medium truncate">{getBlockLabel(block)}</p>
+              {getSideLabel(block) && (
+                <span className="shrink-0 px-1 py-0.5 text-[8px] font-semibold rounded bg-accent/15 text-accent">
+                  {getSideLabel(block)}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-fg-subtle mt-0.5">
               {formatDurationCompact(block.duration_secs)}
             </p>

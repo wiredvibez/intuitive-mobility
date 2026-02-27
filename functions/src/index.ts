@@ -9,7 +9,9 @@ admin.initializeApp();
  * Firestore trigger: when a video_import_jobs doc is created with status 'created',
  * run the full pipeline (download, analyze, cut clips).
  */
-export const onVideoImportJobCreated = functions.firestore
+export const onVideoImportJobCreated = functions
+  .runWith({ timeoutSeconds: 300, memory: '1GB' })
+  .firestore
   .document('video_import_jobs/{jobId}')
   .onCreate(async (snap, context) => {
     const job = snap.data();

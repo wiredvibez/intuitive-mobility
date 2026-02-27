@@ -33,14 +33,14 @@ export default function SignInPage() {
     <div className="flex flex-col items-center justify-center min-h-screen px-6">
       <div className="w-full max-w-sm space-y-12">
         {/* Logo / Title */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">
+        <div className="text-center">
+          <h1 className="font-display font-bold text-6xl leading-none tracking-tight">
             INTUITIVE
           </h1>
-          <h1 className="text-3xl font-bold tracking-tight text-accent">
+          <h1 className="font-display font-bold text-6xl leading-none tracking-tight text-accent">
             MOBILITY
           </h1>
-          <p className="text-sm text-fg-muted mt-4">
+          <p className="text-sm text-fg-muted mt-5">
             Your personal workout companion
           </p>
         </div>

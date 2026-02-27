@@ -239,14 +239,14 @@ export default function ExerciseDetailPage() {
               </div>
             )}
           </div>
-          {/* Floating name – bold, over bottom of video, overflows right */}
+          {/* Floating name – bold, over bottom of video */}
           <div
-            className="absolute bottom-0 left-0 right-0 pt-8 pb-2.5 pl-4 pr-1 overflow-visible"
+            className="absolute bottom-0 left-0 right-0 pt-8 pb-2.5 px-3"
             aria-hidden
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent rounded-b-xl pointer-events-none" />
             <h2
-              className="relative text-xl sm:text-2xl font-bold tracking-tight text-white whitespace-nowrap leading-tight"
+              className="relative text-lg font-bold tracking-tight text-white leading-snug line-clamp-2"
               style={{
                 textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.6)',
               }}

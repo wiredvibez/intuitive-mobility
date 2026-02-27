@@ -39,6 +39,8 @@ export interface Exercise {
   chips: string[];
   is_public: boolean;
   credit?: string;
+  /** When true, adding to routine creates two blocks (left + right side) */
+  two_sided?: boolean;
   /** Storage path for resolving URL (used by imported exercises) */
   media_storage_path?: string;
   createdAt: Timestamp;
@@ -46,6 +48,8 @@ export interface Exercise {
 }
 
 // ── Routine Blocks ────────────────────────────────────────
+export type ExerciseSide = 'left' | 'right';
+
 export interface ExerciseBlock {
   id: string;
   type: 'exercise';
@@ -57,6 +61,8 @@ export interface ExerciseBlock {
   exercise_type: ExerciseType;
   duration_secs: number;
   reps?: number;
+  /** For two-sided exercises, indicates which side this block is for */
+  side?: ExerciseSide;
 }
 
 export interface BreakBlock {
@@ -100,6 +106,8 @@ export interface FlatBlock {
   reps?: number;
   originalBlockId: string;
   loopIteration?: number;
+  /** For two-sided exercises, indicates which side */
+  side?: ExerciseSide;
 }
 
 // ── Active Workout ────────────────────────────────────────
@@ -220,6 +228,8 @@ export interface ImportExerciseItem {
   media_url?: string;
   status: ImportExerciseItemStatus;
   exercise_id?: string;
+  /** When true, adding to routine creates two blocks (left + right side) */
+  two_sided?: boolean;
 }
 
 export interface InstagramMetadata {

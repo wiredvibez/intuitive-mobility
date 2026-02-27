@@ -81,6 +81,7 @@ export function flattenBlocks(
         duration_secs: ex.duration_secs,
         reps: ex.reps,
         originalBlockId: ex.id,
+        side: ex.side,
       });
     } else if (block.type === 'break') {
       const br = block as BreakBlock;
@@ -110,6 +111,7 @@ export function flattenBlocks(
               reps: ex.reps,
               originalBlockId: ex.id,
               loopIteration: i,
+              side: ex.side,
             });
           } else {
             const br = flatBlock as BreakBlock;
