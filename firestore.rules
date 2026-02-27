@@ -60,5 +60,11 @@ service cloud.firestore {
                   && resource.data.user_id == request.auth.uid;
       allow write: if false;
     }
+
+    // App settings: Admin users only (admin field on user doc)
+    match /app_settings/{settingId} {
+      allow read, write: if request.auth != null
+                         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true;
+    }
   }
 }

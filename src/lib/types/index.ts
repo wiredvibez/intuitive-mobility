@@ -13,6 +13,7 @@ export interface UserProfile {
   preferences?: Record<string, unknown>;
   tags?: string[];
   analyzed_video_urls?: string[];
+  admin?: boolean;
   createdAt: Timestamp;
 }
 
@@ -246,4 +247,6 @@ export interface VideoImportJob {
   storage_ref_full?: string;
   storage_ref_clips?: string[];
   ai_analysis_log_id?: string;
+  /** True when user dismissed an error card (status stays 'error') */
+  dismissed?: boolean;
 }

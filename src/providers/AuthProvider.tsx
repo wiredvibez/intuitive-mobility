@@ -24,6 +24,7 @@ interface AuthContextValue {
   profile: UserProfile | null;
   loading: boolean;
   isNewUser: boolean;
+  isAdmin: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -79,6 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [firebaseUser, fetchProfile]);
 
+  const isAdmin = profile?.admin === true;
+
   return (
     <AuthContext.Provider
       value={{
@@ -86,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         loading,
         isNewUser,
+        isAdmin,
         signInWithGoogle,
         signOut,
         refreshProfile,

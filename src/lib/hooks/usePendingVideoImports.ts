@@ -23,7 +23,7 @@ export function usePendingVideoImports(): VideoImportJob[] {
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs
         .map((d) => d.data() as VideoImportJob)
-        .filter((j) => !['complete', 'rejected', 'error'].includes(j.status));
+        .filter((j) => !['complete', 'rejected'].includes(j.status) && !j.dismissed);
       setJobs(data);
     });
     return () => unsub();

@@ -7,6 +7,35 @@ import ffmpegPath from 'ffmpeg-static';
 import { execSync } from 'child_process';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+const COOKIES_PATH = '/tmp/ig_cookies.txt';
+
+async function ensureCookieFile(): Promise<string | undefined> {
+  // Try Firestore first (admin-managed cookies via /admin/settings)
+  try {
+    const snap = await getDb().collection('app_settings').doc('instagram').get();
+    const data = snap.data();
+    if (data?.instagram_cookies_base64) {
+      const decoded = Buffer.from(data.instagram_cookies_base64 as string, 'base64').toString('utf-8');
+      fs.writeFileSync(COOKIES_PATH, decoded, 'utf-8');
+      return COOKIES_PATH;
+    }
+  } catch (err) {
+    functions.logger.warn('Failed to read cookies from Firestore', err);
+  }
+
+  // Fallback to env var
+  const raw = process.env.INSTAGRAM_COOKIES;
+  if (!raw) return undefined;
+  try {
+    const decoded = Buffer.from(raw, 'base64').toString('utf-8');
+    fs.writeFileSync(COOKIES_PATH, decoded, 'utf-8');
+    return COOKIES_PATH;
+  } catch {
+    functions.logger.warn('Failed to write Instagram cookie file');
+    return undefined;
+  }
+}
+
 function getDb() {
   return admin.firestore();
 }
@@ -28,12 +57,12 @@ const EXERCISE_CHIPS = [
 ];
 
 interface InstagramMetadata {
-  author?: { username?: string; full_name?: string; profile_url?: string };
-  caption?: string;
-  duration_seconds?: number;
-  view_count?: number;
-  like_count?: number;
-  comment_count?: number;
+  author?: { username?: string | null; full_name?: string | null; profile_url?: string | null };
+  caption?: string | null;
+  duration_seconds?: number | null;
+  view_count?: number | null;
+  like_count?: number | null;
+  comment_count?: number | null;
   hashtags?: string[];
   mentions?: string[];
   url?: string;
@@ -101,7 +130,7 @@ async function setJobError(
   await updateJob(jobId, {
     status: 'error',
     status_message: message,
-    ai_analysis_log_id: logId ?? undefined,
+    ai_analysis_log_id: logId ?? null,
   });
 }
 
@@ -114,15 +143,15 @@ function parseMetadata(ytdlpInfo: Record<string, unknown>, url: string): Instagr
 
   return {
     author: {
-      username: (ytdlpInfo.uploader_id as string) || (ytdlpInfo.channel_id as string) || undefined,
-      full_name: (ytdlpInfo.uploader as string) || (ytdlpInfo.channel as string) || undefined,
-      profile_url: (ytdlpInfo.uploader_url as string) || (ytdlpInfo.channel_url as string) || undefined,
+      username: (ytdlpInfo.uploader_id as string) || (ytdlpInfo.channel_id as string) || null,
+      full_name: (ytdlpInfo.uploader as string) || (ytdlpInfo.channel as string) || null,
+      profile_url: (ytdlpInfo.uploader_url as string) || (ytdlpInfo.channel_url as string) || null,
     },
-    caption: desc || (ytdlpInfo.title as string) || undefined,
-    duration_seconds: (ytdlpInfo.duration as number) || undefined,
-    view_count: (ytdlpInfo.view_count as number) || undefined,
-    like_count: (ytdlpInfo.like_count as number) || undefined,
-    comment_count: (ytdlpInfo.comment_count as number) || undefined,
+    caption: desc || (ytdlpInfo.title as string) || null,
+    duration_seconds: (ytdlpInfo.duration as number) || null,
+    view_count: (ytdlpInfo.view_count as number) || null,
+    like_count: (ytdlpInfo.like_count as number) || null,
+    comment_count: (ytdlpInfo.comment_count as number) || null,
     hashtags: extractHashtags(desc),
     mentions: extractMentions(desc),
     url,
@@ -228,11 +257,14 @@ export async function processVideoImportPipeline(
 
     // 3. Download
     fs.mkdirSync(tempDir, { recursive: true });
+    const cookiePath = await ensureCookieFile();
+    const cookieOpts = cookiePath ? { cookies: cookiePath } : {};
     try {
       const info = await youtubedl(instagramUrl, {
         dumpSingleJson: true,
         noCheckCertificates: true,
         noWarnings: true,
+        ...cookieOpts,
       });
       Object.assign(metadata, parseMetadata(info as Record<string, unknown>, instagramUrl));
 
@@ -241,6 +273,7 @@ export async function processVideoImportPipeline(
         noCheckCertificates: true,
         format: 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
         mergeOutputFormat: 'mp4',
+        ...cookieOpts,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Download failed';
@@ -421,7 +454,7 @@ Return the JSON schema.`;
       chips: mapChipsToRegistry(ex.chips || []),
       timestamp_start: ex.timestamp_start,
       timestamp_end: ex.timestamp_end,
-      media_url: signedUrls[i] || undefined,
+      media_url: signedUrls[i] || null,
       status: 'pending' as const,
     }));
 
@@ -433,7 +466,7 @@ Return the JSON schema.`;
     await updateJob(jobId, {
       status: 'await_approve',
       exercises,
-      storage_ref_full: undefined,
+      storage_ref_full: admin.firestore.FieldValue.delete(),
       storage_ref_clips: storageRefClips,
     });
 

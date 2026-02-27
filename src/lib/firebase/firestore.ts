@@ -449,6 +449,33 @@ export async function updateImportExerciseItem(
   await updateVideoImportJob(jobId, { exercises });
 }
 
+// ── Admin Settings ────────────────────────────────────────
+export interface AppSettings {
+  instagram_cookies_base64?: string;
+  cookies_updated_at?: Timestamp;
+  cookies_updated_by?: string;
+}
+
+export async function getAppSettings(): Promise<AppSettings | null> {
+  const snap = await getDoc(doc(db, 'app_settings', 'instagram'));
+  return snap.exists() ? (snap.data() as AppSettings) : null;
+}
+
+export async function saveInstagramCookies(
+  cookiesBase64: string,
+  userId: string
+): Promise<void> {
+  await setDoc(
+    doc(db, 'app_settings', 'instagram'),
+    {
+      instagram_cookies_base64: cookiesBase64,
+      cookies_updated_at: serverTimestamp(),
+      cookies_updated_by: userId,
+    },
+    { merge: true }
+  );
+}
+
 // ── Helpers ───────────────────────────────────────────────
 export function applyRoutineModifications(
   blocks: RoutineBlock[],

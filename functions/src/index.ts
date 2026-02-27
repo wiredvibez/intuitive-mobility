@@ -132,7 +132,7 @@ export const rejectImportJobCallable = functions.https.onCall(
       );
     }
     await jobRef.update({
-      status: 'rejected',
+      dismissed: true,
       updated_at: admin.firestore.FieldValue.serverTimestamp(),
     });
     return { success: true };
