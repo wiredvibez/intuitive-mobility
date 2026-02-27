@@ -72,7 +72,7 @@ export function PendingVideoProcessCard({ job }: PendingVideoProcessCardProps) {
             <p className="text-xs text-danger mt-0.5">Something went wrong. You can dismiss this import.</p>
           )}
           {isProcessing && !isStuck && (
-            <p className="text-xs text-fg-muted mt-0.5">Import from Instagram</p>
+            <p className="text-xs text-fg-muted mt-0.5">Come back later!</p>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
