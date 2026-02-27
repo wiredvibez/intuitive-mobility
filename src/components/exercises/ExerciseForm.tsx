@@ -148,7 +148,7 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
         finalMediaUrl = upload.url;
       }
 
-      const data: Record<string, unknown> = {
+      const data: Omit<Exercise, 'id' | 'createdAt' | 'updatedAt'> = {
         author_id: firebaseUser.uid,
         name: name.trim(),
         description: description.trim(),
@@ -158,12 +158,8 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
         chips,
         two_sided: twoSided,
         is_public: isPublic,
+        ...(type === 'repeat' ? { default_time_per_rep_secs: parseInt(timePerRep) } : {}),
       };
-
-      // Only include default_time_per_rep_secs for repeat exercises
-      if (type === 'repeat') {
-        data.default_time_per_rep_secs = parseInt(timePerRep);
-      }
 
       if (exercise) {
         await updateExercise(exercise.id, data);
