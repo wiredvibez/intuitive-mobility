@@ -10,7 +10,7 @@ interface MobileShellProps {
 export function MobileShell({ children }: MobileShellProps) {
   return (
     <div className="min-h-screen flex flex-col">
-      <main className="flex-1 w-full max-w-app mx-auto pb-16">
+      <main className="flex-1 w-full max-w-app mx-auto pt-safe-t pb-16">
         {children}
       </main>
       <BottomNav />

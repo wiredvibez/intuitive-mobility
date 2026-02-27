@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { Timestamp } from 'firebase/firestore';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { functions, httpsCallable } from '@/lib/firebase/config';
@@ -14,8 +15,11 @@ const STATUS_LABELS: Record<string, string> = {
   analyzed: 'Cutting clips...',
   await_approve: 'Ready to review',
   incomplete_approve: 'Ready to review',
-  error: 'Error',
+  error: 'Import failed',
 };
+
+// Jobs stuck in a processing state for longer than this are considered timed out
+const PROCESSING_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 interface PendingVideoProcessCardProps {
   job: VideoImportJob;
@@ -24,9 +28,18 @@ interface PendingVideoProcessCardProps {
 export function PendingVideoProcessCard({ job }: PendingVideoProcessCardProps) {
   const router = useRouter();
   const addToast = useUIStore((s) => s.addToast);
+
   const isProcessing = !['await_approve', 'incomplete_approve', 'error'].includes(job.status);
   const isReady = ['await_approve', 'incomplete_approve'].includes(job.status);
   const isError = job.status === 'error';
+
+  const isStuck = isProcessing && (() => {
+    if (!job.updated_at) return false;
+    const updatedMs = job.updated_at instanceof Timestamp
+      ? job.updated_at.toMillis()
+      : (job.updated_at as { seconds: number }).seconds * 1000;
+    return Date.now() - updatedMs > PROCESSING_TIMEOUT_MS;
+  })();
 
   const handleReview = () => {
     router.push(`/exercises/import/review/${job.id}`);
@@ -40,7 +53,7 @@ export function PendingVideoProcessCard({ job }: PendingVideoProcessCardProps) {
       );
       await reject({ jobId: job.id });
       addToast('Dismissed', 'info');
-    } catch (err) {
+    } catch {
       addToast('Failed to dismiss', 'error');
     }
   };
@@ -50,17 +63,20 @@ export function PendingVideoProcessCard({ job }: PendingVideoProcessCardProps) {
       <div className="flex items-center justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">
-            {STATUS_LABELS[job.status] ?? job.status}
+            {isStuck ? 'Import timed out' : (STATUS_LABELS[job.status] ?? job.status)}
           </p>
           {isError && job.status_message && (
             <p className="text-xs text-danger mt-0.5">{job.status_message}</p>
           )}
-          {isProcessing && (
+          {isStuck && (
+            <p className="text-xs text-danger mt-0.5">Something went wrong. You can dismiss this import.</p>
+          )}
+          {isProcessing && !isStuck && (
             <p className="text-xs text-fg-muted mt-0.5">Import from Instagram</p>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {isProcessing && <Spinner className="w-5 h-5" />}
+          {isProcessing && !isStuck && <Spinner className="w-5 h-5" />}
           {isReady && (
             <Button
               variant="primary"
@@ -70,7 +86,7 @@ export function PendingVideoProcessCard({ job }: PendingVideoProcessCardProps) {
               Review
             </Button>
           )}
-          {isError && (
+          {(isError || isStuck) && (
             <Button
               variant="secondary"
               onClick={handleDismiss}

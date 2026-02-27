@@ -325,7 +325,7 @@ export async function processVideoImportPipeline(
     const genAI = new GoogleGenerativeAI(apiKey);
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-3.0-flash',
       generationConfig: {
         temperature: 0.3,
         maxOutputTokens: 8192,
@@ -473,10 +473,14 @@ Return the JSON schema.`;
     await cleanup();
   } catch (err) {
     functions.logger.error('Pipeline error', err);
-    await setJobError(
-      jobId,
-      err instanceof Error ? err.message : 'Processing failed'
-    );
+    try {
+      await setJobError(
+        jobId,
+        err instanceof Error ? err.message : 'Processing failed'
+      );
+    } catch (updateErr) {
+      functions.logger.error('Failed to mark job as error — job may be stuck', updateErr);
+    }
     await cleanup(true);
   }
 }
