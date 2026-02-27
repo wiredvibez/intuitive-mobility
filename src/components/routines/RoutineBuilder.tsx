@@ -18,6 +18,7 @@ import {
   calculateRoutineDuration,
 } from '@/lib/utils/formatters';
 import { validateRoutineName } from '@/lib/utils/validators';
+import { getExerciseMediaUrl } from '@/lib/firebase/storage';
 import { DURATION_PRESETS } from '@/lib/types';
 import type {
   Routine,
@@ -105,9 +106,11 @@ export function RoutineBuilder({ routine }: RoutineBuilderProps) {
     });
   };
 
-  const handleExerciseConfirmed = (config: { reps?: number; duration_secs: number }) => {
+  const handleExerciseConfirmed = async (config: { reps?: number; duration_secs: number }) => {
     if (!pendingExercise) return;
     const { exercise, targetIndex, loopId } = pendingExercise;
+
+    const mediaUrl = await getExerciseMediaUrl(exercise);
 
     const newBlock: ExerciseBlock = {
       id: uuid(),
@@ -115,7 +118,7 @@ export function RoutineBuilder({ routine }: RoutineBuilderProps) {
       exercise_id: exercise.id,
       exercise_name: exercise.name,
       exercise_description: exercise.description,
-      media_url: exercise.media_url,
+      media_url: mediaUrl,
       media_type: exercise.media_type,
       exercise_type: exercise.type,
       duration_secs: config.duration_secs,

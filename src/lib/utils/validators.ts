@@ -54,7 +54,7 @@ export const ACCEPTED_MEDIA_TYPES =
   'video/mp4,video/webm,video/quicktime,image/gif,image/png,image/jpeg,image/heic';
 
 /** Max video duration in seconds */
-export const MAX_VIDEO_DURATION_SECS = 10;
+export const MAX_VIDEO_DURATION_SECS = 15;
 
 /** Get video duration */
 export function getVideoDuration(file: File): Promise<number> {
@@ -71,4 +71,38 @@ export function getVideoDuration(file: File): Promise<number> {
     };
     video.src = URL.createObjectURL(file);
   });
+}
+
+const INSTAGRAM_REEL_PATTERNS = [
+  /^https?:\/\/(?:www\.)?instagram\.com\/reel\/([A-Za-z0-9_-]+)\/?/,
+  /^https?:\/\/(?:www\.)?instagram\.com\/p\/([A-Za-z0-9_-]+)\/?/,
+  /^https?:\/\/(?:www\.)?instagram\.com\/reels\/([A-Za-z0-9_-]+)\/?/,
+];
+
+/** Validate Instagram Reel URL */
+export function validateInstagramUrl(
+  url: string
+): { valid: true; shortcode: string } | { valid: false; error: string } {
+  if (!url || typeof url !== 'string') {
+    return { valid: false, error: 'No URL provided' };
+  }
+  const trimmed = url.trim();
+  try {
+    new URL(trimmed);
+  } catch {
+    return { valid: false, error: 'Invalid URL format' };
+  }
+  if (!trimmed.includes('instagram.com')) {
+    return { valid: false, error: 'Not an Instagram URL' };
+  }
+  for (const pattern of INSTAGRAM_REEL_PATTERNS) {
+    const match = trimmed.match(pattern);
+    if (match?.[1]) {
+      return { valid: true, shortcode: match[1] };
+    }
+  }
+  return {
+    valid: false,
+    error: 'Not a valid Instagram Reel URL. Use format: https://www.instagram.com/reel/xxxxx/',
+  };
 }

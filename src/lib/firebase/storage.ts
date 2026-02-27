@@ -45,3 +45,15 @@ export async function getDownloadURL(path: string): Promise<string> {
   const storageRef = ref(storage, path);
   return fbGetDownloadURL(storageRef);
 }
+
+/** Resolve exercise media URL (handles media_storage_path for imported exercises) */
+export async function getExerciseMediaUrl(exercise: {
+  media_url?: string;
+  media_storage_path?: string;
+}): Promise<string> {
+  if (exercise.media_url) return exercise.media_url;
+  if (exercise.media_storage_path) {
+    return getDownloadURL(exercise.media_storage_path);
+  }
+  return '';
+}

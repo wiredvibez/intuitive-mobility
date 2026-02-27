@@ -4,9 +4,31 @@ import {
   getPendingMedia,
   removePendingMedia,
 } from './dexie';
-import { createArchiveEntry } from '../firebase/firestore';
+import {
+  createArchiveEntry,
+  updateExerciseStatsForCompletedWorkout,
+} from '../firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 import { uploadMemoryMedia } from '../firebase/storage';
 import type { ArchiveEntry } from '../types';
+
+function toTimestamp(val: unknown): Timestamp {
+  if (val instanceof Timestamp) return val;
+  if (
+    val &&
+    typeof val === 'object' &&
+    'seconds' in val &&
+    typeof (val as { seconds: unknown }).seconds === 'number'
+  ) {
+    const obj = val as { seconds: number; nanoseconds?: number };
+    return new Timestamp(obj.seconds, obj.nanoseconds ?? 0);
+  }
+  // Fallback: log warning and use current time
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('toTimestamp: invalid input, falling back to now()', val);
+  }
+  return Timestamp.now();
+}
 
 const MAX_RETRIES = 3;
 const BASE_DELAY = 2000;
@@ -37,9 +59,15 @@ export async function processSyncQueue(userId: string) {
   const pendingArchives = await getPendingArchives(userId);
   for (const pending of pendingArchives) {
     try {
-      await withRetry(() =>
-        createArchiveEntry(userId, pending.data as unknown as Omit<ArchiveEntry, 'id'>)
-      );
+      const data = pending.data as unknown as Omit<ArchiveEntry, 'id'>;
+      await withRetry(() => createArchiveEntry(userId, data));
+      if (data.blocks_completed?.length) {
+        await updateExerciseStatsForCompletedWorkout(
+          userId,
+          data.blocks_completed,
+          toTimestamp(data.completed_at)
+        );
+      }
       await removePendingArchive(pending.id!);
     } catch (err) {
       console.error('Failed to sync archive:', err);

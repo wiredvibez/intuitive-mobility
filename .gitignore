@@ -1,5 +1,6 @@
 # dependencies
 /node_modules
+/functions/node_modules
 /.pnp
 .pnp.js
 .yarn/install-state.gz
@@ -14,17 +15,26 @@
 # production
 /build
 
+# Firebase
+/functions/lib
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+
 # misc
 .DS_Store
 *.pem
+Thumbs.db
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
-.env*.local
+# env files - NEVER commit secrets
+.env
+.env.*
+!.env.example
 
 # vercel
 .vercel

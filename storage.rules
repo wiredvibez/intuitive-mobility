@@ -1,7 +1,12 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    
+
+    // Temp imports: Cloud Functions only (admin SDK); no client access
+    match /temp/imports/{jobId}/{allPaths=**} {
+      allow read, write: if false;
+    }
+
     // Exercise media: Author write, authenticated read
     match /exercises/{userId}/{fileName} {
       allow read: if request.auth != null;

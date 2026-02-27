@@ -1,6 +1,8 @@
 'use client';
 
 import { motion } from 'motion/react';
+import { RepeatIcon, TimerIcon } from '@/components/ui/Icons';
+import { useExerciseMediaUrl } from '@/lib/hooks/useExerciseMediaUrl';
 import type { Exercise } from '@/lib/types';
 
 interface ExerciseCardProps {
@@ -10,6 +12,8 @@ interface ExerciseCardProps {
 }
 
 export function ExerciseCard({ exercise, onSelect, compact = false }: ExerciseCardProps) {
+  const mediaUrl = useExerciseMediaUrl(exercise);
+
   return (
     <motion.button
       whileTap={{ scale: 0.95 }}
@@ -18,10 +22,10 @@ export function ExerciseCard({ exercise, onSelect, compact = false }: ExerciseCa
     >
       {/* Portrait preview card */}
       <div className="relative rounded-xl overflow-hidden bg-bg-card border border-border aspect-[9/16] w-full transition-colors group-hover:border-fg-subtle">
-        {exercise.media_url ? (
+        {mediaUrl ? (
           exercise.media_type === 'video' ? (
             <video
-              src={exercise.media_url}
+              src={mediaUrl}
               muted
               loop
               playsInline
@@ -30,7 +34,7 @@ export function ExerciseCard({ exercise, onSelect, compact = false }: ExerciseCa
             />
           ) : (
             <img
-              src={exercise.media_url}
+              src={mediaUrl}
               alt={exercise.name}
               className="w-full h-full object-cover"
             />
@@ -46,8 +50,12 @@ export function ExerciseCard({ exercise, onSelect, compact = false }: ExerciseCa
         )}
 
         {/* Type badge */}
-        <div className="absolute top-1 right-1 bg-black/60 rounded px-1.5 py-0.5 text-[10px] text-white">
-          {exercise.type === 'repeat' ? '⟳' : '⏱'}
+        <div className="absolute top-1 right-1 bg-black/60 rounded px-1.5 py-0.5 flex items-center gap-0.5 text-white">
+          {exercise.type === 'repeat' ? (
+            <RepeatIcon size={10} />
+          ) : (
+            <TimerIcon size={10} />
+          )}
         </div>
       </div>
 

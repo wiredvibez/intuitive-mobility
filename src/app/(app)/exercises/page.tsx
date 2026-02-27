@@ -1,15 +1,21 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useExercises } from '@/lib/hooks/useExercises';
+import { usePendingVideoImports } from '@/lib/hooks/usePendingVideoImports';
 import { ExerciseCard } from '@/components/exercises/ExerciseCard';
+import { PendingVideoProcessCard } from '@/components/exercises/PendingVideoProcessCard';
+import { ImportInstagramSheet } from '@/components/exercises/ImportInstagramSheet';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import type { Exercise } from '@/lib/types';
 
 export default function ExercisesPage() {
   const router = useRouter();
+  const [showImportSheet, setShowImportSheet] = useState(false);
   const { exercises, loading } = useExercises(true);
+  const pendingImports = usePendingVideoImports();
 
   const handleSelect = (exercise: Exercise) => {
     router.push(`/exercises/${exercise.id}`);
@@ -17,17 +23,40 @@ export default function ExercisesPage() {
 
   return (
     <div className="px-4 pt-4">
+      {/* Pending imports */}
+      {pendingImports.length > 0 && (
+        <div className="mb-4 space-y-2">
+          {pendingImports.map((job) => (
+            <PendingVideoProcessCard key={job.id} job={job} />
+          ))}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-bold">My Exercises</h1>
-        <Button
-          variant="secondary"
-          onClick={() => router.push('/exercises/new')}
-          className="!py-2 !px-3 !text-xs"
-        >
-          + New
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => setShowImportSheet(true)}
+            className="!py-2 !px-3 !text-xs"
+          >
+            Import
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => router.push('/exercises/new')}
+            className="!py-2 !px-3 !text-xs"
+          >
+            + New
+          </Button>
+        </div>
       </div>
+
+      <ImportInstagramSheet
+        open={showImportSheet}
+        onClose={() => setShowImportSheet(false)}
+      />
 
       {/* Content */}
       {loading ? (

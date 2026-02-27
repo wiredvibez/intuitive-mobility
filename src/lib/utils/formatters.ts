@@ -79,6 +79,15 @@ export function formatRelativeTime(date: Date): string {
   return 'Just now';
 }
 
+/** Format date as short string, e.g. "Jan 15, 2025" */
+export function formatDateShort(date: Date): string {
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 /** Format phone number for display: XX-XXX-XXXX */
 export function formatPhoneDisplay(raw: string): string {
   const digits = raw.replace(/\D/g, '');

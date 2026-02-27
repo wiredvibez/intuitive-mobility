@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/providers/AuthProvider';
 import { updateUser } from '@/lib/firebase/firestore';
-import { EXERCISE_CHIPS } from '@/lib/types';
+import { EXERCISE_CHIPS, EXERCISE_TYPE_LABELS } from '@/lib/types';
 import { useUIStore } from '@/lib/stores/uiStore';
 import { createExercise, updateExercise } from '@/lib/firebase/firestore';
 import { uploadExerciseMedia } from '@/lib/firebase/storage';
@@ -12,21 +12,23 @@ import { Input, Textarea } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { ChipSelector } from './ChipSelector';
 import { VideoTrimmer } from './VideoTrimmer';
+import { RepeatIcon, TimerIcon, XIcon } from '@/components/ui/Icons';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import {
   validateExerciseName,
   getMediaTypeFromFile,
   isVideoFile,
-  getVideoDuration,
   ACCEPTED_MEDIA_TYPES,
-  MAX_VIDEO_DURATION_SECS,
 } from '@/lib/utils/validators';
 import type { Exercise, ExerciseType, MediaType } from '@/lib/types';
 
 interface ExerciseFormProps {
   exercise?: Exercise;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-export function ExerciseForm({ exercise }: ExerciseFormProps) {
+export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProps) {
   const { firebaseUser, profile, refreshProfile } = useAuth();
   const router = useRouter();
   const addToast = useUIStore((s) => s.addToast);
@@ -49,22 +51,56 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
   const [trimSource, setTrimSource] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const isDirty = useMemo(() => {
+    if (name !== (exercise?.name || '')) return true;
+    if (description !== (exercise?.description || '')) return true;
+    if (type !== (exercise?.type || 'repeat')) return true;
+    if (
+      timePerRep !==
+      (exercise?.default_time_per_rep_secs?.toString() || '2')
+    )
+      return true;
+    const exChips = exercise?.chips ?? [];
+    const chipsSet = new Set(chips);
+    const exChipsSet = new Set(exChips);
+    if (
+      chips.length !== exChips.length ||
+      chips.some((c) => !exChipsSet.has(c)) ||
+      exChips.some((c) => !chipsSet.has(c))
+    )
+      return true;
+    if (isPublic !== (exercise?.is_public ?? false)) return true;
+    if (mediaFile) return true;
+    return false;
+  }, [
+    name,
+    description,
+    type,
+    timePerRep,
+    chips,
+    isPublic,
+    mediaFile,
+    exercise,
+  ]);
+
+  const handleCancel = () => {
+    if (isDirty && onCancel) {
+      setShowDiscardModal(true);
+      return;
+    }
+    onCancel?.();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (isVideoFile(file)) {
-      try {
-        const dur = await getVideoDuration(file);
-        if (dur > MAX_VIDEO_DURATION_SECS) {
-          setTrimSource(file);
-          setShowTrimmer(true);
-          return;
-        }
-      } catch {
-        // proceed anyway
-      }
+      setTrimSource(file);
+      setShowTrimmer(true);
+      return;
     }
 
     setMediaFile(file);
@@ -124,12 +160,12 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
       if (exercise) {
         await updateExercise(exercise.id, data);
         addToast('Exercise updated', 'success');
+        onSuccess ? onSuccess() : router.back();
       } else {
         await createExercise(data);
         addToast('Exercise created', 'success');
+        router.back();
       }
-
-      router.back();
     } catch (err) {
       console.error('Save failed:', err);
       addToast('Failed to save exercise', 'error');
@@ -152,8 +188,13 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
   }
 
   return (
-    <div className="space-y-5 p-4">
-      <Input
+    <div className="space-y-6 p-4">
+      {/* Basics */}
+      <section className="space-y-4">
+        <h2 className="text-xs font-semibold text-fg-muted uppercase tracking-wider">
+          Basics
+        </h2>
+        <Input
         label="Exercise Name"
         placeholder="e.g., Push-ups"
         value={name}
@@ -168,8 +209,12 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
+      </section>
 
-      {/* Type Toggle */}
+      <section className="space-y-4">
+        <h2 className="text-xs font-semibold text-fg-muted uppercase tracking-wider">
+          Type & timing
+        </h2>
       <div className="space-y-1.5">
         <label className="block text-sm font-medium text-fg-muted">Type</label>
         <div className="flex rounded-xl bg-bg-elevated border border-border overflow-hidden">
@@ -179,11 +224,12 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
               type="button"
               onClick={() => setType(t)}
               className={`
-                flex-1 py-2.5 text-sm font-medium transition-colors
+                flex-1 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5
                 ${type === t ? 'bg-accent text-white' : 'text-fg-muted hover:text-foreground'}
               `}
             >
-              {t === 'repeat' ? '⟳ Repeat' : '⏱ Timed'}
+              {t === 'repeat' ? <RepeatIcon size={16} /> : <TimerIcon size={16} />}
+              {EXERCISE_TYPE_LABELS[t]}
             </button>
           ))}
         </div>
@@ -201,8 +247,12 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
           min={1}
         />
       )}
+      </section>
 
-      {/* Chips */}
+      <section className="space-y-4">
+        <h2 className="text-xs font-semibold text-fg-muted uppercase tracking-wider">
+          Tags & privacy
+        </h2>
       <div className="space-y-1.5">
         <label className="block text-sm font-medium text-fg-muted">Tags</label>
         <ChipSelector
@@ -242,8 +292,12 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
           />
         </button>
       </div>
+      </section>
 
-      {/* Media Upload */}
+      <section className="space-y-2">
+        <h2 className="text-xs font-semibold text-fg-muted uppercase tracking-wider">
+          Media
+        </h2>
       <div className="space-y-2">
         <label className="block text-sm font-medium text-fg-muted">Media</label>
 
@@ -270,9 +324,10 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
                 setMediaFile(null);
                 setMediaPreview('');
               }}
-              className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white text-sm"
+              className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white text-sm hover:bg-black/80 transition-colors"
+              aria-label="Remove media"
             >
-              ✕
+              <XIcon size={16} />
             </button>
           </div>
         ) : (
@@ -302,10 +357,41 @@ export function ExerciseForm({ exercise }: ExerciseFormProps) {
           className="hidden"
         />
       </div>
+      </section>
 
-      <Button fullWidth onClick={handleSave} loading={saving}>
-        {exercise ? 'Save Changes' : 'Create Exercise'}
-      </Button>
+      <div className="flex gap-3 pt-2">
+        {onCancel && (
+          <Button
+            variant="secondary"
+            className="flex-1"
+            onClick={handleCancel}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+        )}
+        <Button
+          fullWidth={!onCancel}
+          className={onCancel ? 'flex-1' : ''}
+          onClick={handleSave}
+          loading={saving}
+        >
+          {exercise ? 'Save Changes' : 'Create Exercise'}
+        </Button>
+      </div>
+
+      <ConfirmModal
+        open={showDiscardModal}
+        onClose={() => setShowDiscardModal(false)}
+        onConfirm={() => {
+          setShowDiscardModal(false);
+          onCancel?.();
+        }}
+        title="Discard changes?"
+        message="Your edits will not be saved."
+        confirmLabel="Discard"
+        variant="danger"
+      />
     </div>
   );
 }

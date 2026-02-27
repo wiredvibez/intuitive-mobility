@@ -12,12 +12,19 @@ export interface UserProfile {
   referral_source_other?: string;
   preferences?: Record<string, unknown>;
   tags?: string[];
+  analyzed_video_urls?: string[];
   createdAt: Timestamp;
 }
 
 // ── Exercise ──────────────────────────────────────────────
 export type ExerciseType = 'repeat' | 'timed';
 export type MediaType = 'video' | 'gif' | 'photo';
+
+/** Display label for exercise type (חזרות = Reps) */
+export const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {
+  repeat: 'Reps',
+  timed: 'Timed',
+};
 
 export interface Exercise {
   id: string;
@@ -30,6 +37,9 @@ export interface Exercise {
   media_type: MediaType;
   chips: string[];
   is_public: boolean;
+  credit?: string;
+  /** Storage path for resolving URL (used by imported exercises) */
+  media_storage_path?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -122,6 +132,23 @@ export interface CompletedBlock {
   time_added_secs: number;
 }
 
+// ── User Exercise Stats ───────────────────────────────────
+export interface UserExerciseStats {
+  user_id: string;
+  exercise_id: string;
+  exercise_name: string;
+  completions: number;
+  skips: number;
+  workouts_included: number;
+  total_planned_duration_secs: number;
+  total_actual_duration_secs: number;
+  total_time_added_secs: number;
+  avg_duration_secs: number;
+  first_completed_at: Timestamp;
+  last_completed_at: Timestamp;
+  updated_at: Timestamp;
+}
+
 // ── Archive Entry ─────────────────────────────────────────
 export type CompletionType = 'completed' | 'auto_completed';
 
@@ -165,3 +192,58 @@ export type ExerciseChip = (typeof EXERCISE_CHIPS)[number];
 // ── Duration Presets ──────────────────────────────────────
 export const DURATION_PRESETS = [0, 5, 10, 15, 20, 30, 45, 60] as const;
 export const BREAK_DURATION_PRESETS = [5, 10, 15, 20, 30, 45, 60] as const;
+
+// ── Video Import Job ──────────────────────────────────────
+export type VideoImportJobStatus =
+  | 'created'
+  | 'invoked'
+  | 'v_downloaded'
+  | 'analyzed'
+  | 'await_approve'
+  | 'incomplete_approve'
+  | 'complete'
+  | 'error'
+  | 'rejected';
+
+export type ImportExerciseItemStatus = 'pending' | 'approved' | 'removed';
+
+export interface ImportExerciseItem {
+  index: number;
+  name: string;
+  description: string;
+  type: ExerciseType;
+  default_time_per_rep_secs?: number;
+  chips: string[];
+  timestamp_start: number;
+  timestamp_end: number;
+  media_url?: string;
+  status: ImportExerciseItemStatus;
+  exercise_id?: string;
+}
+
+export interface InstagramMetadata {
+  author?: { username?: string; full_name?: string; profile_url?: string };
+  caption?: string;
+  duration_seconds?: number;
+  view_count?: number;
+  like_count?: number;
+  comment_count?: number;
+  hashtags?: string[];
+  mentions?: string[];
+  url?: string;
+}
+
+export interface VideoImportJob {
+  id: string;
+  user_id: string;
+  instagram_url: string;
+  status: VideoImportJobStatus;
+  status_message?: string;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+  instagram_metadata?: InstagramMetadata;
+  exercises: ImportExerciseItem[];
+  storage_ref_full?: string;
+  storage_ref_clips?: string[];
+  ai_analysis_log_id?: string;
+}

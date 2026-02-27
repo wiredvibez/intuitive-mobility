@@ -8,6 +8,7 @@ import { useUIStore } from '@/lib/stores/uiStore';
 import { usePlayerStore } from '@/lib/stores/playerStore';
 import {
   createArchiveEntry,
+  updateExerciseStatsForCompletedWorkout,
   deleteWorkout,
   updateRoutine,
   getRoutine,
@@ -112,12 +113,13 @@ export function WorkoutSummary() {
         }
 
         // Create archive entry only when at least one block was completed
+        const completedAt = Timestamp.now();
         await createArchiveEntry(firebaseUser.uid, {
           workout_id: workoutId,
           routine_id: routineId,
           routine_name: routineName,
           custom_name: customName || routineName,
-          completed_at: Timestamp.now(),
+          completed_at: completedAt,
           completion_type: 'completed',
           total_duration_secs: totalDuration,
           blocks_completed: completedBlocks,
@@ -125,6 +127,11 @@ export function WorkoutSummary() {
           memory_media: memoryMedia,
           memory_media_paths: memoryPaths,
         });
+        await updateExerciseStatsForCompletedWorkout(
+          firebaseUser.uid,
+          completedBlocks,
+          completedAt
+        );
       }
 
       // Clean up active workout
