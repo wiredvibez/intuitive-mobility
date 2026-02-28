@@ -95,3 +95,29 @@ export function formatPhoneDisplay(raw: string): string {
   if (digits.length <= 5) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
   return `${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5, 9)}`;
 }
+
+/** Format days since as human-readable string */
+export function formatDaysSince(days: number): string {
+  if (days === 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 14) return '1 week ago';
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+  if (days < 60) return '1 month ago';
+  return `${Math.floor(days / 30)} months ago`;
+}
+
+/** Format streak count */
+export function formatStreak(days: number): string {
+  if (days === 1) return '1 day streak';
+  return `${days} day streak`;
+}
+
+/** Get time-of-day greeting */
+export function getTimeOfDayGreeting(): 'morning' | 'afternoon' | 'evening' | 'night' {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 17) return 'afternoon';
+  if (hour >= 17 && hour < 21) return 'evening';
+  return 'night';
+}

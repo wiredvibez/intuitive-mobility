@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/providers/AuthProvider';
 import { getVideoImportJob } from '@/lib/firebase/firestore';
@@ -38,6 +38,9 @@ export function ImportReviewPlayer({ job: initialJob, onComplete }: ImportReview
   const [loadingIndex, setLoadingIndex] = useState<number | null>(null);
   const [preloadedVideos, setPreloadedVideos] = useState<Set<string>>(new Set());
   const [trimmerExercise, setTrimmerExercise] = useState<ImportExerciseItem | null>(null);
+  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   const pendingExercises = job.exercises.filter((e) => e.status === 'pending');
   const approvedCount = job.exercises.filter((e) => e.status === 'approved').length;
@@ -94,6 +97,25 @@ export function ImportReviewPlayer({ job: initialJob, onComplete }: ImportReview
       newMap.set(index, { ...current, ...updates });
       return newMap;
     });
+  }, []);
+
+  const handleCardClick = useCallback((index: number, isCurrentlyExpanded: boolean) => {
+    if (isCurrentlyExpanded) {
+      setExpandedIndex(null);
+    } else {
+      setExpandedIndex(index);
+      // Scroll to the card after a short delay to allow the expansion animation to start
+      requestAnimationFrame(() => {
+        const cardEl = cardRefs.current.get(index);
+        const containerEl = scrollContainerRef.current;
+        if (cardEl && containerEl) {
+          const containerRect = containerEl.getBoundingClientRect();
+          const cardRect = cardEl.getBoundingClientRect();
+          const scrollTop = containerEl.scrollTop + (cardRect.top - containerRect.top) - 16; // 16px padding
+          containerEl.scrollTo({ top: scrollTop, behavior: 'smooth' });
+        }
+      });
+    }
   }, []);
 
   const handleApprove = async (exercise: ImportExerciseItem) => {
@@ -212,7 +234,7 @@ export function ImportReviewPlayer({ job: initialJob, onComplete }: ImportReview
       )}
 
       {/* Content - Collapsible cards */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
         <div className="p-4 space-y-3">
           {pendingExercises.map((exercise) => {
             const isExpanded = expandedIndex === exercise.index;
@@ -220,15 +242,21 @@ export function ImportReviewPlayer({ job: initialJob, onComplete }: ImportReview
             const isLoading = loadingIndex === exercise.index;
 
             return (
-              <motion.div
+              <div
                 key={exercise.index}
-                layout
+                ref={(el) => {
+                  if (el) cardRefs.current.set(exercise.index, el);
+                  else cardRefs.current.delete(exercise.index);
+                }}
                 className="bg-bg-card border border-border rounded-xl overflow-hidden"
               >
-                {/* Card header - clickable to expand */}
+                {/* Card header - clickable to expand, sticky when expanded */}
                 <button
-                  onClick={() => setExpandedIndex(isExpanded ? null : exercise.index)}
-                  className="w-full flex items-center gap-3 p-3 text-left"
+                  onClick={() => handleCardClick(exercise.index, isExpanded)}
+                  className={`
+                    w-full flex items-center gap-3 p-3 text-left bg-bg-card
+                    ${isExpanded ? 'sticky top-0 z-10 border-b border-border' : ''}
+                  `}
                   disabled={isLoading}
                 >
                   {/* Video thumbnail */}
@@ -273,7 +301,7 @@ export function ImportReviewPlayer({ job: initialJob, onComplete }: ImportReview
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden"
                     >
-                      <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
+                      <div className="px-3 pb-3 space-y-3 pt-3">
                         {/* Large video preview - clickable to edit clip */}
                         {exercise.media_url && (
                           <button
@@ -393,7 +421,7 @@ export function ImportReviewPlayer({ job: initialJob, onComplete }: ImportReview
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.div>
+              </div>
             );
           })}
         </div>

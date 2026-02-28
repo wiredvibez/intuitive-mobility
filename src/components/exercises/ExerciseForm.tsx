@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/providers/AuthProvider';
 import { updateUser } from '@/lib/firebase/firestore';
@@ -8,11 +8,14 @@ import { EXERCISE_CHIPS, EXERCISE_TYPE_LABELS } from '@/lib/types';
 import { useUIStore } from '@/lib/stores/uiStore';
 import { createExercise, updateExercise } from '@/lib/firebase/firestore';
 import { uploadExerciseMedia } from '@/lib/firebase/storage';
+import { useExerciseMediaUrl } from '@/lib/hooks/useExerciseMediaUrl';
 import { Input, Textarea } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ChipSelector } from './ChipSelector';
 import { VideoTrimmer } from './VideoTrimmer';
-import { RepeatIcon, TimerIcon, XIcon } from '@/components/ui/Icons';
+import { ImportVideoTrimmer } from './ImportVideoTrimmer';
+import { RepeatIcon, TimerIcon, XIcon, ScissorsIcon, RefreshIcon } from '@/components/ui/Icons';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import {
   validateExerciseName,
@@ -34,6 +37,9 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
   const addToast = useUIStore((s) => s.addToast);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Resolve media URL for imported exercises that use storage_path
+  const resolvedMediaUrl = useExerciseMediaUrl(exercise);
+
   const [name, setName] = useState(exercise?.name || '');
   const [description, setDescription] = useState(exercise?.description || '');
   const [type, setType] = useState<ExerciseType>(exercise?.type || 'repeat');
@@ -44,15 +50,24 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
   const [twoSided, setTwoSided] = useState(exercise?.two_sided ?? false);
   const [isPublic, setIsPublic] = useState(exercise?.is_public ?? false);
   const [mediaFile, setMediaFile] = useState<File | Blob | null>(null);
-  const [mediaPreview, setMediaPreview] = useState(exercise?.media_url || '');
+  const [mediaPreview, setMediaPreview] = useState('');
   const [mediaType, setMediaType] = useState<MediaType>(
     exercise?.media_type || 'video'
   );
   const [showTrimmer, setShowTrimmer] = useState(false);
   const [trimSource, setTrimSource] = useState<File | null>(null);
+  const [showUrlTrimmer, setShowUrlTrimmer] = useState(false);
+  const [showMediaActions, setShowMediaActions] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+
+  // Set media preview once resolved URL is available
+  useEffect(() => {
+    if (!mediaFile && resolvedMediaUrl) {
+      setMediaPreview(resolvedMediaUrl);
+    }
+  }, [resolvedMediaUrl, mediaFile]);
 
   const isDirty = useMemo(() => {
     if (name !== (exercise?.name || '')) return true;
@@ -118,6 +133,16 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
     setShowTrimmer(false);
     setTrimSource(null);
   };
+
+  const handleUrlTrimComplete = (blob: Blob) => {
+    setMediaFile(blob);
+    setMediaType('video');
+    setMediaPreview(URL.createObjectURL(blob));
+    setShowUrlTrimmer(false);
+  };
+
+  const hasExistingMedia = !mediaFile && resolvedMediaUrl;
+  const hasNewMedia = !!mediaFile;
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -198,6 +223,16 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
           setShowTrimmer(false);
           setTrimSource(null);
         }}
+      />
+    );
+  }
+
+  if (showUrlTrimmer && resolvedMediaUrl) {
+    return (
+      <ImportVideoTrimmer
+        videoUrl={resolvedMediaUrl}
+        onTrim={handleUrlTrimComplete}
+        onCancel={() => setShowUrlTrimmer(false)}
       />
     );
   }
@@ -357,16 +392,34 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
                 className="w-full h-full object-cover"
               />
             )}
-            <button
-              onClick={() => {
-                setMediaFile(null);
-                setMediaPreview('');
-              }}
-              className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white text-sm hover:bg-black/80 transition-colors"
-              aria-label="Remove media"
-            >
-              <XIcon size={16} />
-            </button>
+            
+            {/* For existing media: show tap to edit overlay */}
+            {hasExistingMedia && mediaType === 'video' && (
+              <button
+                type="button"
+                onClick={() => setShowMediaActions(true)}
+                className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center group"
+              >
+                <span className="bg-white/90 text-black text-xs font-semibold px-3 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                  Edit Video
+                </span>
+              </button>
+            )}
+            
+            {/* For new media: show X button to remove */}
+            {hasNewMedia && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMediaFile(null);
+                  setMediaPreview(resolvedMediaUrl || '');
+                }}
+                className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white text-sm hover:bg-black/80 transition-colors"
+                aria-label="Remove new media"
+              >
+                <XIcon size={16} />
+              </button>
+            )}
           </div>
         ) : (
           <button
@@ -430,6 +483,44 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
         confirmLabel="Discard"
         variant="danger"
       />
+
+      {/* Video action sheet */}
+      <BottomSheet
+        open={showMediaActions}
+        onClose={() => setShowMediaActions(false)}
+        title="Edit Video"
+      >
+        <div className="p-4 space-y-2 pb-safe-b">
+          <button
+            type="button"
+            onClick={() => {
+              setShowMediaActions(false);
+              fileInputRef.current?.click();
+            }}
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-bg-elevated hover:bg-bg-elevated/80 transition-colors text-left"
+          >
+            <RefreshIcon size={20} className="text-fg-muted shrink-0" />
+            <div>
+              <p className="font-medium text-sm">Replace Video</p>
+              <p className="text-xs text-fg-muted">Upload a new video to replace the current one</p>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowMediaActions(false);
+              setShowUrlTrimmer(true);
+            }}
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-bg-elevated hover:bg-bg-elevated/80 transition-colors text-left"
+          >
+            <ScissorsIcon size={20} className="text-fg-muted shrink-0" />
+            <div>
+              <p className="font-medium text-sm">Trim Video</p>
+              <p className="text-xs text-fg-muted">Adjust start and end points of the clip</p>
+            </div>
+          </button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

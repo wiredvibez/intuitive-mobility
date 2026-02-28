@@ -107,8 +107,8 @@ export function BottomNav() {
   if (hidden) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-bg-card/95 backdrop-blur-md border-t border-border">
-      <div className="max-w-app mx-auto grid grid-cols-4 pb-safe-b" style={{ height: '56px' }}>
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-bg-card border-t border-border">
+      <div className="max-w-app mx-auto grid grid-cols-4 pt-1 pb-safe-b" style={{ height: '56px' }}>
         {tabs.map((tab) => {
           const active = pathname.startsWith(tab.href);
           return (

@@ -30,8 +30,13 @@ function ExerciseDetailSkeleton() {
         <div className="w-8 h-8 rounded-lg bg-bg-elevated" />
         <div className="h-5 w-32 bg-bg-elevated rounded" />
       </div>
-      <div className="aspect-[9/16] max-w-[280px] mx-auto mt-4 bg-bg-elevated rounded-xl" />
-      <div className="p-4 space-y-4">
+      {/* Match actual video layout: px-4 pt-5, w-[70%] max-w-[196px] left-aligned */}
+      <div className="px-4 pt-5">
+        <div className="w-[70%] max-w-[196px]">
+          <div className="aspect-[9/16] bg-bg-elevated rounded-xl" />
+        </div>
+      </div>
+      <div className="px-4 pt-6 space-y-4">
         <div className="flex gap-2">
           <div className="h-7 w-20 bg-bg-elevated rounded-full" />
           <div className="h-7 w-16 bg-bg-elevated rounded-full" />
