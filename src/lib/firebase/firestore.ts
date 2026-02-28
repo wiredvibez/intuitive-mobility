@@ -11,8 +11,8 @@ import {
   orderBy,
   serverTimestamp,
   runTransaction,
+  Timestamp,
 } from 'firebase/firestore';
-import type { Timestamp } from 'firebase/firestore';
 import { db } from './config';
 import type {
   UserProfile,
@@ -215,6 +215,8 @@ export async function deleteWorkout(userId: string, workoutId: string) {
 function sanitizeForFirestore<T>(obj: T): T {
   if (obj === undefined) return obj;
   if (obj === null) return obj;
+  // Preserve Firestore Timestamps
+  if (obj instanceof Timestamp) return obj;
   if (Array.isArray(obj)) {
     return obj.map((item) =>
       item === undefined ? null : sanitizeForFirestore(item)
@@ -250,7 +252,7 @@ export async function getArchiveEntries(
     orderBy('completed_at', 'desc')
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as ArchiveEntry);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as ArchiveEntry));
 }
 
 export async function getArchiveEntry(

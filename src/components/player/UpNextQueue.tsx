@@ -21,42 +21,109 @@ function getSideLabel(block: FlatBlock): string | null {
   return null;
 }
 
-function getBlockColor(block: FlatBlock): string {
-  if (block.type === 'exercise') return 'border-accent/40';
-  if (block.type === 'break') return 'border-fg-subtle/30';
-  return 'border-accent/20';
-}
-
 export function UpNextQueue({ blocks }: UpNextQueueProps) {
   if (blocks.length === 0) return null;
 
+  const [firstBlock, ...restBlocks] = blocks;
+
   return (
     <div>
-      <p className="text-xs font-semibold text-fg-muted uppercase tracking-wider mb-2">
+      <p className="text-xs font-semibold text-fg-muted uppercase tracking-wider mb-3">
         Up Next
       </p>
-      <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-        {blocks.map((block, i) => (
-          <div
-            key={`${block.id}_${i}`}
-            className={`
-              shrink-0 w-20 rounded-lg bg-bg-elevated border p-2 text-center
-              ${getBlockColor(block)}
-            `}
-          >
-            <div className="flex items-center justify-center gap-1">
-              <p className="text-[10px] font-medium truncate">{getBlockLabel(block)}</p>
-              {getSideLabel(block) && (
+      <div className="flex gap-3 items-end">
+        {/* First block - larger with video preview */}
+        <div className="shrink-0 w-28 rounded-xl bg-bg-elevated border border-border overflow-hidden">
+          {/* Video preview or Rest indicator */}
+          <div className="aspect-[4/3] bg-bg-card relative overflow-hidden">
+            {firstBlock.type === 'exercise' && firstBlock.media_url ? (
+              <video
+                src={firstBlock.media_url}
+                muted
+                loop
+                playsInline
+                autoPlay
+                className="w-full h-full object-cover"
+              />
+            ) : firstBlock.type === 'break' ? (
+              <div className="w-full h-full flex items-center justify-center bg-bg-card">
+                <span className="text-xl font-bold text-accent">REST</span>
+              </div>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-bg-card">
+                <span className="text-2xl">
+                  {firstBlock.type === 'prep' ? '🏃' : '🧘'}
+                </span>
+              </div>
+            )}
+          </div>
+          {/* Info */}
+          <div className="p-2">
+            <div className="flex items-center gap-1">
+              <p className={`text-xs font-medium truncate ${firstBlock.type === 'break' ? 'text-accent' : ''}`}>
+                {getBlockLabel(firstBlock)}
+              </p>
+              {getSideLabel(firstBlock) && (
                 <span className="shrink-0 px-1 py-0.5 text-[8px] font-semibold rounded bg-accent/15 text-accent">
-                  {getSideLabel(block)}
+                  {getSideLabel(firstBlock)}
                 </span>
               )}
             </div>
-            <p className="text-xs text-fg-subtle mt-0.5">
-              {formatDurationCompact(block.duration_secs)}
+            <p className="text-[10px] text-fg-subtle mt-0.5">
+              {formatDurationCompact(firstBlock.duration_secs)}
             </p>
           </div>
-        ))}
+        </div>
+
+        {/* Remaining blocks - smaller, horizontal scroll */}
+        <div className="flex-1 overflow-x-auto hide-scrollbar">
+          <div className="flex gap-2 pb-1">
+            {restBlocks.map((block, i) => (
+              <div
+                key={`${block.id}_${i}`}
+                className="shrink-0 w-20 rounded-lg bg-bg-elevated border border-border p-2"
+              >
+                {/* Mini preview */}
+                <div className="aspect-square rounded bg-bg-card mb-1.5 overflow-hidden">
+                  {block.type === 'exercise' && block.media_url ? (
+                    <video
+                      src={block.media_url}
+                      muted
+                      loop
+                      playsInline
+                      autoPlay
+                      className="w-full h-full object-cover"
+                    />
+                  ) : block.type === 'break' ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-sm font-bold text-accent">REST</span>
+                    </div>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-lg">
+                        {block.type === 'prep' ? '🏃' : '🧘'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {/* Info */}
+                <div className="flex items-center justify-center gap-1">
+                  <p className={`text-[10px] font-medium truncate ${block.type === 'break' ? 'text-accent' : ''}`}>
+                    {getBlockLabel(block)}
+                  </p>
+                  {getSideLabel(block) && (
+                    <span className="shrink-0 px-1 py-0.5 text-[8px] font-semibold rounded bg-accent/15 text-accent">
+                      {getSideLabel(block)}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-fg-subtle text-center mt-0.5">
+                  {formatDurationCompact(block.duration_secs)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

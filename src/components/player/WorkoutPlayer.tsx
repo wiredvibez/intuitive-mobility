@@ -9,7 +9,6 @@ import { useAuth } from '@/providers/AuthProvider';
 import { updateWorkoutState, deleteWorkout } from '@/lib/firebase/firestore';
 import { MediaPlayer } from './MediaPlayer';
 import { PlayerTimer } from './PlayerTimer';
-import { PlayerControls } from './PlayerControls';
 import { UpNextQueue } from './UpNextQueue';
 
 export function WorkoutPlayer() {
@@ -132,9 +131,9 @@ export function WorkoutPlayer() {
     skip();
   };
 
-  const handleAddTime = () => {
-    addTime(10);
-    addToast('+10s added', 'info');
+  const handleAddTime = (seconds: number) => {
+    addTime(seconds);
+    addToast(`+${seconds}s added`, 'info');
   };
 
   if (!currentBlock && !isComplete) {
@@ -160,6 +159,8 @@ export function WorkoutPlayer() {
     ? Math.ceil(remainingSeconds / timePerRep)
     : 0;
 
+  const hasVideo = currentBlock?.type === 'exercise' && currentBlock.media_url;
+
   return (
     <div className="fixed inset-0 bg-background z-50 flex flex-col pt-safe-t">
       {/* Header */}
@@ -167,92 +168,146 @@ export function WorkoutPlayer() {
         <button
           onClick={() => setShowExitConfirm(true)}
           className="w-8 h-8 flex items-center justify-center text-fg-muted hover:text-foreground"
+          aria-label="Exit workout"
         >
-          ✕
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
         </button>
         <div className="flex items-center gap-2 text-sm text-fg-muted">
           <span className="font-medium">
             {Math.min(currentBlockIndex + 1, totalBlocks)} of {totalBlocks}
           </span>
         </div>
-        <button
-          onClick={handleSkip}
-          className="w-8 h-8 flex items-center justify-center text-fg-muted hover:text-foreground"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <polygon points="5,4 15,12 5,20" />
-            <rect x="17" y="4" width="3" height="16" rx="1" />
-          </svg>
-        </button>
+        <div className="w-8" />
       </div>
 
-      {/* Media */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
-        {currentBlock?.type === 'exercise' && currentBlock.media_url ? (
-          <div className="relative w-full max-w-[200px] aspect-[9/16] rounded-2xl overflow-hidden">
-            <MediaPlayer
-              mediaUrl={currentBlock.media_url}
-              mediaType={currentBlock.media_type}
-              className="w-full h-full"
-            />
-            {/* Reps overlay for repeat exercises */}
-            {isRepeatExercise && remainingReps > 0 && (
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm rounded-full px-4 py-2 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold text-white tabular-nums">
-                  {remainingReps}
-                </span>
-                <span className="text-xs text-white/70">
-                  rep{remainingReps !== 1 ? 's' : ''}
-                </span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="w-32 h-32 rounded-full bg-bg-elevated flex items-center justify-center">
-            {currentBlock?.type === 'break' ? (
-              <span className="text-4xl">☕</span>
-            ) : currentBlock?.type === 'prep' ? (
-              <span className="text-4xl">🏃</span>
-            ) : (
-              <span className="text-4xl">🧘</span>
-            )}
-          </div>
-        )}
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Video area with side controls */}
+        <div className="flex-1 flex items-center justify-center px-4 gap-3">
+          {/* Left spacer for balance */}
+          <div className="w-12 shrink-0" />
 
-        {/* Block name */}
-        <div className="text-center">
-          <h2 className="text-xl font-bold">{blockLabel}</h2>
-          {sideLabel && (
-            <span className="inline-block mt-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-accent/15 text-accent">
-              {sideLabel}
-            </span>
-          )}
+          {/* Video / Icon in center */}
+          <div className="flex flex-col items-center gap-4 flex-1">
+            {hasVideo ? (
+              <button
+                onClick={handlePlayPause}
+                className="relative w-full max-w-[180px] aspect-[9/16] rounded-2xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-accent"
+              >
+                <MediaPlayer
+                  mediaUrl={currentBlock.media_url}
+                  mediaType={currentBlock.media_type}
+                  isPlaying={isPlaying}
+                  showPlayOverlay
+                  className="w-full h-full"
+                />
+                {/* Reps overlay for repeat exercises */}
+                {isRepeatExercise && remainingReps > 0 && (
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm rounded-full px-4 py-2 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-bold text-white tabular-nums">
+                      {remainingReps}
+                    </span>
+                    <span className="text-xs text-white/70">
+                      rep{remainingReps !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={handlePlayPause}
+                className="w-28 h-28 rounded-full bg-bg-elevated flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-accent"
+              >
+                {currentBlock?.type === 'break' ? (
+                  <span className="text-4xl font-bold text-accent">REST</span>
+                ) : currentBlock?.type === 'prep' ? (
+                  <span className="text-3xl">🏃</span>
+                ) : (
+                  <span className="text-3xl">🧘</span>
+                )}
+              </button>
+            )}
+
+            {/* Block name */}
+            <div className="text-center">
+              <h2 className="text-lg font-bold">{blockLabel}</h2>
+              {sideLabel && (
+                <span className="inline-block mt-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-accent/15 text-accent">
+                  {sideLabel}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Right side controls: Skip + Time buttons */}
+          <div className="flex flex-col items-center gap-2 w-12 shrink-0">
+            {/* Skip button */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={handleSkip}
+              className="w-11 h-11 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-fg-muted hover:text-foreground transition-colors"
+              aria-label="Skip"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5,4 15,12 5,20" />
+                <rect x="17" y="4" width="3" height="16" rx="1" />
+              </svg>
+            </motion.button>
+
+            {/* +10s button */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => handleAddTime(10)}
+              className="w-11 h-11 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-fg-muted hover:text-foreground transition-colors"
+              aria-label="Add 10 seconds"
+            >
+              <span className="text-[10px] font-bold">+10s</span>
+            </motion.button>
+
+            {/* +30s button */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => handleAddTime(30)}
+              className="w-11 h-11 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-fg-muted hover:text-foreground transition-colors"
+              aria-label="Add 30 seconds"
+            >
+              <span className="text-[10px] font-bold">+30s</span>
+            </motion.button>
+          </div>
         </div>
 
-        {/* Description for exercise blocks */}
-        {currentBlock?.type === 'exercise' && currentBlock.exercise_description && (
-          <p className="text-xs text-fg-muted text-center max-w-xs line-clamp-2">
-            {currentBlock.exercise_description}
-          </p>
-        )}
+        {/* Timer + Play/Pause */}
+        <div className="flex flex-col items-center gap-4 py-4">
+          <PlayerTimer
+            remainingSeconds={remainingSeconds}
+            totalSeconds={currentBlock?.duration_secs || 0}
+          />
 
-        {/* Timer */}
-        <PlayerTimer
-          remainingSeconds={remainingSeconds}
-          totalSeconds={currentBlock?.duration_secs || 0}
-        />
-
-        {/* Controls */}
-        <PlayerControls
-          isPlaying={isPlaying}
-          onPlayPause={handlePlayPause}
-          onSkip={handleSkip}
-          onAddTime={handleAddTime}
-        />
+          {/* Play/Pause button */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={handlePlayPause}
+            className="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-accent-fg shadow-lg shadow-accent/30"
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+          >
+            {isPlaying ? (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16" rx="1" />
+                <rect x="14" y="4" width="4" height="16" rx="1" />
+              </svg>
+            ) : (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="8,5 19,12 8,19" />
+              </svg>
+            )}
+          </motion.button>
+        </div>
       </div>
 
-      {/* Up Next */}
-      <div className="px-4 pb-10 pb-safe-b">
+      {/* Up Next - larger section */}
+      <div className="px-4 pb-6 pb-safe-b">
         <UpNextQueue blocks={nextBlocks} />
       </div>
 

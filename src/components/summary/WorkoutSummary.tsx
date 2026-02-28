@@ -237,6 +237,7 @@ export function WorkoutSummary() {
           captures={captures}
           onCapture={handleCapture}
           onRemove={handleRemoveCapture}
+          disabled={saving}
         />
       </div>
 

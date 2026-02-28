@@ -440,8 +440,13 @@ Return the JSON schema.`;
       if (duration <= 0) continue;
 
       const clipPath = path.join(clipsDir, `${i}.mp4`);
+      // Re-encode to ensure proper keyframes at clip start (avoids black frames)
+      // Use -ss before -i for fast seeking, then accurate trim with re-encoding
+      // movflags +faststart enables progressive playback
       execSync(
-        `"${ffmpegPath}" -y -i "${fullPath}" -ss ${start} -t ${duration} -c copy "${clipPath}"`,
+        `"${ffmpegPath}" -y -ss ${start} -i "${fullPath}" -t ${duration} ` +
+        `-c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k ` +
+        `-movflags +faststart "${clipPath}"`,
         { stdio: 'pipe' }
       );
       if (!fs.existsSync(clipPath)) continue;

@@ -13,9 +13,10 @@ interface MemoryCaptureProps {
   captures: CapturedMedia[];
   onCapture: (media: CapturedMedia) => void;
   onRemove: (id: string) => void;
+  disabled?: boolean;
 }
 
-export function MemoryCapture({ captures, onCapture, onRemove }: MemoryCaptureProps) {
+export function MemoryCapture({ captures, onCapture, onRemove, disabled }: MemoryCaptureProps) {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [isRecording, setIsRecording] = useState(false);
@@ -31,20 +32,43 @@ export function MemoryCapture({ captures, onCapture, onRemove }: MemoryCapturePr
 
   const startCamera = useCallback(async () => {
     try {
+      // Stop any existing stream first
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { 
+          facingMode, 
+          width: { ideal: 1280 }, 
+          height: { ideal: 720 } 
+        },
         audio: false,
       });
+      
       streamRef.current = stream;
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        // Ensure video plays after srcObject is set
-        try {
-          await videoRef.current.play();
-        } catch (playErr) {
-          console.warn('Video autoplay failed:', playErr);
-        }
+        
+        // Wait for video to be ready before setting camera open
+        videoRef.current.onloadeddata = () => {
+          videoRef.current?.play().catch(console.warn);
+        };
+        
+        // Fallback: try to play immediately
+        setTimeout(async () => {
+          if (videoRef.current && videoRef.current.paused) {
+            try {
+              await videoRef.current.play();
+            } catch (playErr) {
+              console.warn('Video autoplay failed:', playErr);
+            }
+          }
+        }, 100);
       }
+      
       setCameraOpen(true);
     } catch (err) {
       console.error('Camera access failed:', err);
@@ -194,6 +218,13 @@ export function MemoryCapture({ captures, onCapture, onRemove }: MemoryCapturePr
     // Re-open with new facing mode
     setTimeout(() => startCamera(), 100);
   };
+
+  // Stop camera when disabled (e.g., during save)
+  useEffect(() => {
+    if (disabled && cameraOpen) {
+      stopCamera();
+    }
+  }, [disabled, cameraOpen, stopCamera]);
 
   // Cleanup on unmount
   useEffect(() => {
