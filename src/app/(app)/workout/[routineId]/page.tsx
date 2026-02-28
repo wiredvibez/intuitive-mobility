@@ -4,11 +4,17 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/providers/AuthProvider';
 import { useUIStore } from '@/lib/stores/uiStore';
-import { getRoutine, createWorkout, getActiveWorkout } from '@/lib/firebase/firestore';
+import {
+  getRoutine,
+  createWorkout,
+  getActiveWorkout,
+  getAllAccessibleExercises,
+} from '@/lib/firebase/firestore';
 import { usePlayerStore, flattenBlocks } from '@/lib/stores/playerStore';
 import { WorkoutPlayer } from '@/components/player/WorkoutPlayer';
 import { Spinner } from '@/components/ui/Spinner';
 import { Timestamp } from 'firebase/firestore';
+import { offlineCacheManager } from '@/lib/offline/cacheManager';
 import type { Routine } from '@/lib/types';
 
 export default function WorkoutPage() {
@@ -35,6 +41,9 @@ export default function WorkoutPage() {
           setLoading(false);
           return;
         }
+
+        // Cache for offline (if enabled) - run in background
+        cacheRoutineForOffline(routine, firebaseUser.uid);
 
         // Flatten blocks
         const flatBlocks = flattenBlocks(
@@ -95,6 +104,25 @@ export default function WorkoutPage() {
         modifications: [],
         skipped_blocks: [],
       });
+    };
+
+    const cacheRoutineForOffline = async (routine: Routine, userId: string) => {
+      try {
+        const enabled = await offlineCacheManager.isEnabled();
+        if (!enabled) return;
+
+        const existingCache = await offlineCacheManager.getCachedRoutine(routine.id);
+        if (existingCache) {
+          // Refresh expiry (unless pinned)
+          await offlineCacheManager.refreshRoutineExpiry(routine.id);
+        } else {
+          // Cache new routine with 14-day expiry
+          const exercises = await getAllAccessibleExercises(userId);
+          await offlineCacheManager.cacheRoutine(userId, routine, exercises, false);
+        }
+      } catch (err) {
+        console.error('Failed to cache routine for offline:', err);
+      }
     };
 
     init();

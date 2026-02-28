@@ -1,13 +1,21 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/providers/AuthProvider';
 import { useRoutine } from '@/lib/hooks/useRoutines';
+import { useExercises } from '@/lib/hooks/useExercises';
 import { useUIStore } from '@/lib/stores/uiStore';
 import { deleteRoutine } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { formatDuration, formatDurationCompact } from '@/lib/utils/formatters';
+import { offlineCacheManager } from '@/lib/offline/cacheManager';
+import {
+  useOfflineEnabled,
+  useRoutineCacheStatus,
+  formatBytes,
+} from '@/lib/hooks/useOfflineCache';
 import type { RoutineBlock, ExerciseBlock, LoopBlock } from '@/lib/types';
 
 function BlockListItem({ block, depth = 0 }: { block: RoutineBlock; depth?: number }) {
@@ -66,7 +74,44 @@ export default function RoutineDetailPage() {
   const router = useRouter();
   const { firebaseUser } = useAuth();
   const { routine, loading } = useRoutine(id);
+  const { exercises } = useExercises();
   const addToast = useUIStore((s) => s.addToast);
+
+  const { enabled: offlineEnabled } = useOfflineEnabled();
+  const { cached, refetch: refetchCache } = useRoutineCacheStatus(id);
+
+  const [caching, setCaching] = useState(false);
+  const [cacheProgress, setCacheProgress] = useState<{ current: number; total: number } | null>(null);
+
+  const handleToggleOffline = useCallback(async () => {
+    if (!routine || !firebaseUser) return;
+
+    if (cached?.pinned) {
+      await offlineCacheManager.pinRoutine(routine.id, false);
+      addToast('Routine will expire in 14 days', 'success');
+    } else if (cached) {
+      await offlineCacheManager.pinRoutine(routine.id, true);
+      addToast('Routine pinned for offline', 'success');
+    } else {
+      setCaching(true);
+      setCacheProgress({ current: 0, total: 1 });
+      try {
+        await offlineCacheManager.cacheRoutine(
+          firebaseUser.uid,
+          routine,
+          exercises,
+          true,
+          (current, total) => setCacheProgress({ current, total })
+        );
+        addToast('Routine saved for offline', 'success');
+      } catch {
+        addToast('Failed to cache routine', 'error');
+      }
+      setCaching(false);
+      setCacheProgress(null);
+    }
+    refetchCache();
+  }, [routine, firebaseUser, cached, exercises, addToast, refetchCache]);
 
   const handleDelete = async () => {
     if (!routine || !firebaseUser || !confirm('Delete this routine?')) return;
@@ -117,6 +162,45 @@ export default function RoutineDetailPage() {
           <span className="text-fg-subtle">·</span>
           <span>{routine.blocks.length} blocks</span>
         </div>
+
+        {/* Offline Toggle */}
+        {offlineEnabled && (
+          <div className="bg-bg-card rounded-xl p-4 mb-4 border border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Available Offline</p>
+                {cached && (
+                  <p className="text-sm text-fg-muted">
+                    {formatBytes(cached.sizeBytes)}
+                    {cached.pinned && ' · Pinned'}
+                  </p>
+                )}
+                {caching && cacheProgress && (
+                  <p className="text-sm text-fg-muted">
+                    Downloading... {cacheProgress.current}/{cacheProgress.total}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={handleToggleOffline}
+                disabled={caching}
+                className={`
+                  relative w-12 h-7 rounded-full transition-colors
+                  ${cached?.pinned ? 'bg-accent' : cached ? 'bg-accent/50' : 'bg-fg-subtle/30'}
+                  ${caching ? 'opacity-50' : ''}
+                `}
+              >
+                <span
+                  className={`
+                    absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md
+                    transition-transform duration-200
+                    ${cached ? 'left-[22px]' : 'left-0.5'}
+                  `}
+                />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Block list */}
         <div className="space-y-0 divide-y divide-border">

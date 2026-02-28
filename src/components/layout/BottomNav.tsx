@@ -70,6 +70,34 @@ const tabs = [
       </svg>
     ),
   },
+  {
+    href: '/profile',
+    label: 'Profile',
+    icon: (active: boolean) => (
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill={active ? 'currentColor' : 'none'}
+        stroke="currentColor"
+        strokeWidth={active ? 0 : 1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {active ? (
+          <>
+            <circle cx="12" cy="8" r="4" />
+            <path d="M20 21a8 8 0 0 0-16 0" />
+          </>
+        ) : (
+          <>
+            <circle cx="12" cy="8" r="4" />
+            <path d="M20 21a8 8 0 0 0-16 0" />
+          </>
+        )}
+      </svg>
+    ),
+  },
 ];
 
 export function BottomNav() {
@@ -80,7 +108,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-bg-card/95 backdrop-blur-md border-t border-border">
-      <div className="max-w-app mx-auto grid grid-cols-3 pb-safe-b" style={{ height: '56px' }}>
+      <div className="max-w-app mx-auto grid grid-cols-4 pb-safe-b" style={{ height: '56px' }}>
         {tabs.map((tab) => {
           const active = pathname.startsWith(tab.href);
           return (

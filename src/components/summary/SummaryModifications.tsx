@@ -95,10 +95,10 @@ function analyzeLoopPatterns(completedBlocks: CompletedBlock[]): {
   }
 
   // Final pass: compute allSkipped and someSkipped
-  for (const analysis of loopAnalysis.values()) {
+  Array.from(loopAnalysis.values()).forEach((analysis) => {
     analysis.allSkipped = analysis.skippedIterations.length === analysis.totalIterations;
     analysis.someSkipped = analysis.skippedIterations.length > 0 && !analysis.allSkipped;
-  }
+  });
 
   return { loopAnalysis, loopIterationCounts };
 }
@@ -113,7 +113,7 @@ function generateModifications(completedBlocks: CompletedBlock[]): Modification[
   const { loopAnalysis } = analyzeLoopPatterns(completedBlocks);
 
   // Process loop exercises first (with smart aggregation)
-  for (const analysis of loopAnalysis.values()) {
+  for (const analysis of Array.from(loopAnalysis.values())) {
     const key = `${analysis.loopId}:${analysis.originalBlockId}`;
 
     if (analysis.allSkipped) {

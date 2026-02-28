@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Barlow_Condensed, DM_Sans } from 'next/font/google';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { ToastProvider } from '@/providers/ToastProvider';
+import { ServiceWorkerProvider } from '@/providers/ServiceWorkerProvider';
+import { OfflineProvider } from '@/providers/OfflineProvider';
 import './globals.css';
 
 const barlowCondensed = Barlow_Condensed({
@@ -46,8 +48,11 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased">
         <AuthProvider>
-          {children}
+          <OfflineProvider>
+            {children}
+          </OfflineProvider>
           <ToastProvider />
+          <ServiceWorkerProvider />
         </AuthProvider>
       </body>
     </html>

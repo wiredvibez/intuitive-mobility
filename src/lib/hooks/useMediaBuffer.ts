@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { offlineCacheManager } from '../offline/cacheManager';
 import type { FlatBlock } from '../types';
 
 const WINDOW_SIZE = 4; // current + next 3
@@ -12,6 +13,21 @@ export function useMediaBuffer(blocks: FlatBlock[], currentIndex: number) {
   const bufferBlock = useCallback(async (block: FlatBlock) => {
     if (!block.media_url || blobUrlsRef.current.has(block.id)) return;
 
+    // Try cached media first (for offline support)
+    if (block.exercise_id) {
+      try {
+        const cachedUrl = await offlineCacheManager.getCachedMediaUrl(block.exercise_id);
+        if (cachedUrl) {
+          blobUrlsRef.current.set(block.id, cachedUrl);
+          setBufferedUrls(new Map(blobUrlsRef.current));
+          return;
+        }
+      } catch {
+        // Fall through to network fetch
+      }
+    }
+
+    // Network fetch
     try {
       const response = await fetch(block.media_url);
       const blob = await response.blob();
@@ -19,7 +35,7 @@ export function useMediaBuffer(blocks: FlatBlock[], currentIndex: number) {
       blobUrlsRef.current.set(block.id, blobUrl);
       setBufferedUrls(new Map(blobUrlsRef.current));
     } catch {
-      // Use original URL on failure
+      // Use original URL on failure (may not work offline)
       blobUrlsRef.current.set(block.id, block.media_url);
       setBufferedUrls(new Map(blobUrlsRef.current));
     }

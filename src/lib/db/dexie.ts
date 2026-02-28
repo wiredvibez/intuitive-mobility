@@ -1,4 +1,7 @@
 import Dexie, { type Table } from 'dexie';
+import type { Routine, Exercise } from '../types';
+
+// ── Existing Tables ──────────────────────────────────────
 
 export interface PendingArchive {
   id?: number;
@@ -17,13 +20,6 @@ export interface PendingMedia {
   createdAt: number;
 }
 
-export interface CachedMedia {
-  id?: number;
-  url: string;
-  blob: Blob;
-  cachedAt: number;
-}
-
 export interface WorkoutStateCache {
   id?: number;
   workoutId: string;
@@ -32,19 +28,68 @@ export interface WorkoutStateCache {
   updatedAt: number;
 }
 
+// ── Offline Cache Tables ─────────────────────────────────
+
+export interface CachedMedia {
+  id?: number;
+  url: string;
+  exerciseId: string;
+  blob: Blob;
+  sizeBytes: number;
+  cachedAt: number;
+}
+
+export interface CachedRoutine {
+  id: string;
+  userId: string;
+  routine: Routine;
+  exerciseIds: string[];
+  cachedAt: number;
+  expiresAt: number | null;
+  pinned: boolean;
+  sizeBytes: number;
+}
+
+export interface CachedExercise {
+  id: string;
+  exercise: Exercise;
+  routineIds: string[];
+  cachedAt: number;
+}
+
+export interface OfflineSettings {
+  id: string;
+  enabled: boolean;
+  lastCleanupAt: number;
+}
+
 class AppDatabase extends Dexie {
   pendingArchives!: Table<PendingArchive>;
   pendingMedia!: Table<PendingMedia>;
   cachedMedia!: Table<CachedMedia>;
   workoutState!: Table<WorkoutStateCache>;
+  cachedRoutines!: Table<CachedRoutine>;
+  cachedExercises!: Table<CachedExercise>;
+  offlineSettings!: Table<OfflineSettings>;
 
   constructor() {
     super('IntuitiveMobility');
+
     this.version(1).stores({
       pendingArchives: '++id, userId, createdAt',
       pendingMedia: '++id, userId, archiveId, createdAt',
       cachedMedia: '++id, url, cachedAt',
       workoutState: '++id, workoutId, userId, updatedAt',
+    });
+
+    this.version(2).stores({
+      pendingArchives: '++id, userId, createdAt',
+      pendingMedia: '++id, userId, archiveId, createdAt',
+      cachedMedia: '++id, url, exerciseId, cachedAt',
+      workoutState: '++id, workoutId, userId, updatedAt',
+      cachedRoutines: 'id, userId, expiresAt, pinned',
+      cachedExercises: 'id, *routineIds',
+      offlineSettings: 'id',
     });
   }
 }
@@ -125,4 +170,35 @@ export async function getCachedWorkoutState(workoutId: string) {
 
 export async function removeCachedWorkoutState(workoutId: string) {
   await appDb.workoutState.where('workoutId').equals(workoutId).delete();
+}
+
+// ── Offline Settings ─────────────────────────────────────
+
+const SETTINGS_ID = 'settings';
+
+export async function getOfflineSettings(): Promise<OfflineSettings> {
+  const settings = await appDb.offlineSettings.get(SETTINGS_ID);
+  return settings ?? { id: SETTINGS_ID, enabled: false, lastCleanupAt: 0 };
+}
+
+export async function setOfflineEnabled(enabled: boolean): Promise<void> {
+  const existing = await appDb.offlineSettings.get(SETTINGS_ID);
+  if (existing) {
+    await appDb.offlineSettings.update(SETTINGS_ID, { enabled });
+  } else {
+    await appDb.offlineSettings.add({
+      id: SETTINGS_ID,
+      enabled,
+      lastCleanupAt: Date.now(),
+    });
+  }
+}
+
+export async function updateLastCleanup(): Promise<void> {
+  const existing = await appDb.offlineSettings.get(SETTINGS_ID);
+  if (existing) {
+    await appDb.offlineSettings.update(SETTINGS_ID, {
+      lastCleanupAt: Date.now(),
+    });
+  }
 }
