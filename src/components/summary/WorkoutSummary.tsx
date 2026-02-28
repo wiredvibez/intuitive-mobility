@@ -44,6 +44,7 @@ export function WorkoutSummary() {
   const [modsHandled, setModsHandled] = useState(false);
   const lastSaveTimeRef = useRef<number>(0);
   const saveInProgressRef = useRef<boolean>(false);
+  const modsSaveInProgressRef = useRef<boolean>(false);
 
   const hasModifications = completedBlocks.some(
     (b) => b.time_added_secs > 0 || b.skipped
@@ -79,7 +80,16 @@ export function WorkoutSummary() {
     mods: { blockId: string; newDuration?: number; remove?: boolean }[]
   ) => {
     if (!firebaseUser || !routineId) return;
+
+    // Prevent concurrent modification saves
+    if (modsSaveInProgressRef.current) {
+      addToast('Save in progress...', 'info');
+      return;
+    }
+
+    modsSaveInProgressRef.current = true;
     setModsSaving(true);
+
     try {
       const routine = await getRoutine(firebaseUser.uid, routineId);
       if (routine) {
@@ -89,18 +99,19 @@ export function WorkoutSummary() {
         });
         addToast('Routine updated', 'success');
       }
+      setModsHandled(true);
     } catch (err) {
       console.error('Failed to apply modifications:', err);
       addToast('Failed to update routine', 'error');
     } finally {
       setModsSaving(false);
-      setModsHandled(true);
+      modsSaveInProgressRef.current = false;
     }
   };
 
   const handleDone = async () => {
     if (!firebaseUser || !workoutId || !routineId) return;
-    
+
     // Rate limiting check
     const now = Date.now();
     if (saveInProgressRef.current) {
@@ -111,14 +122,14 @@ export function WorkoutSummary() {
       addToast('Please wait before saving again', 'info');
       return;
     }
-    
+
     lastSaveTimeRef.current = now;
     saveInProgressRef.current = true;
     setSaving(true);
 
-    try {
-      const allSkipped = completedCount === 0;
+    const allSkipped = completedCount === 0;
 
+    try {
       // Upload memory media (only if we're saving to archive)
       const memoryMedia: { url: string; type: 'photo' | 'video' }[] = [];
       const memoryPaths: string[] = [];
@@ -151,30 +162,34 @@ export function WorkoutSummary() {
           memory_media: memoryMedia,
           memory_media_paths: memoryPaths,
         });
+
         await updateExerciseStatsForCompletedWorkout(
           firebaseUser.uid,
           completedBlocks,
           completedAt
         );
       }
-
-      // Clean up active workout - always delete, even if all skipped
-      await deleteWorkout(firebaseUser.uid, workoutId);
-
-      // Reset player state
-      resetPlayer();
-
-      // Clean up preview URLs
-      captures.forEach((c) => URL.revokeObjectURL(c.previewUrl));
-
-      addToast(allSkipped ? 'Workout cleared' : 'Workout saved!', 'success');
-      router.push('/dashboard');
     } catch (err) {
       console.error('Failed to save workout:', err);
       addToast('Failed to save workout', 'error');
       setSaving(false);
       saveInProgressRef.current = false;
+      return;
     }
+
+    // Always clean up the active workout, even if archive creation failed
+    try {
+      await deleteWorkout(firebaseUser.uid, workoutId);
+    } catch (err) {
+      console.error('Failed to delete workout:', err);
+    }
+
+    // Reset player state and cleanup
+    resetPlayer();
+    captures.forEach((c) => URL.revokeObjectURL(c.previewUrl));
+
+    addToast(allSkipped ? 'Workout cleared' : 'Workout saved!', 'success');
+    router.push('/dashboard');
   };
 
   return (
@@ -261,7 +276,12 @@ export function WorkoutSummary() {
       {/* Done button */}
       <div className="fixed bottom-0 left-0 right-0 p-4 pb-safe-b bg-bg-card/95 backdrop-blur-md border-t border-border z-30">
         <div className="max-w-app mx-auto">
-          <Button fullWidth onClick={handleDone} loading={saving}>
+          <Button
+            fullWidth
+            onClick={handleDone}
+            loading={saving}
+            disabled={saving || modsSaving}
+          >
             Done
           </Button>
         </div>

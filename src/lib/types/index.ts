@@ -106,6 +106,8 @@ export interface FlatBlock {
   reps?: number;
   originalBlockId: string;
   loopIteration?: number;
+  /** Parent loop ID if this block is inside a loop */
+  loopId?: string;
   /** For two-sided exercises, indicates which side */
   side?: ExerciseSide;
 }
@@ -139,6 +141,12 @@ export interface CompletedBlock {
   actual_duration_secs: number;
   skipped: boolean;
   time_added_secs: number;
+  /** Original block ID in the routine (for loop blocks, this is the actual exercise ID) */
+  originalBlockId?: string;
+  /** Which loop iteration this block was from (0-indexed) */
+  loopIteration?: number;
+  /** Parent loop ID if this block is inside a loop */
+  loopId?: string;
 }
 
 // ── User Exercise Stats ───────────────────────────────────

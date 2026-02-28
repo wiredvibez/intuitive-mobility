@@ -6,7 +6,7 @@ import { Reorder, AnimatePresence } from 'motion/react';
 import { v4 as uuid } from 'uuid';
 import { useAuth } from '@/providers/AuthProvider';
 import { useUIStore } from '@/lib/stores/uiStore';
-import { createRoutine, updateRoutine } from '@/lib/firebase/firestore';
+import { createRoutine, updateRoutine, normalizeBlocks } from '@/lib/firebase/firestore';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { ExercisePicker } from '@/components/exercises/ExercisePicker';
@@ -226,9 +226,15 @@ export function RoutineBuilder({ routine }: RoutineBuilderProps) {
     setSaving(true);
     addToast('Saving routine...', 'info');
 
+    // Normalize blocks before saving:
+    // - Flatten loops with iterations === 1
+    // - Flatten loops with only 1 block
+    // - Remove empty loops
+    const normalizedBlocks = normalizeBlocks(blocks);
+
     const data = {
       name: name.trim(),
-      blocks,
+      blocks: normalizedBlocks,
       prep_time_secs: prepTime,
       cooldown_time_secs: cooldownTime,
       total_duration_secs: totalDuration,

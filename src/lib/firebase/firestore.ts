@@ -21,6 +21,9 @@ import type {
   Workout,
   ArchiveEntry,
   RoutineBlock,
+  LoopBlock,
+  ExerciseBlock,
+  BreakBlock,
   VideoImportJob,
   VideoImportJobStatus,
   ImportExerciseItem,
@@ -479,21 +482,132 @@ export async function saveInstagramCookies(
 }
 
 // ── Helpers ───────────────────────────────────────────────
+
+/** Modification instruction for routine blocks */
+export interface BlockModification {
+  /** The block ID to modify (can be originalBlockId for loop blocks) */
+  blockId: string;
+  /** New duration in seconds */
+  newDuration?: number;
+  /** Remove this block entirely */
+  remove?: boolean;
+  /** For loop blocks: which loop this block belongs to */
+  loopId?: string;
+}
+
+/**
+ * Normalize routine blocks:
+ * - Flatten loops with iterations === 1 (a 1x loop is pointless)
+ * - Remove empty loops
+ */
+export function normalizeBlocks(blocks: RoutineBlock[]): RoutineBlock[] {
+  const result: RoutineBlock[] = [];
+
+  for (const block of blocks) {
+    if (block.type !== 'loop') {
+      result.push(block);
+      continue;
+    }
+
+    const loop = block as LoopBlock;
+
+    // Remove empty loops
+    if (loop.blocks.length === 0) {
+      continue;
+    }
+
+    // Flatten loops with 1 iteration (a 1x loop is redundant)
+    if (loop.iterations === 1) {
+      // Extract inner blocks directly
+      result.push(...loop.blocks);
+      continue;
+    }
+
+    // Keep the loop as-is
+    result.push(block);
+  }
+
+  return result;
+}
+
+/**
+ * Apply modifications to routine blocks, handling loops properly.
+ * Matches by originalBlockId for loop-contained blocks.
+ */
 export function applyRoutineModifications(
   blocks: RoutineBlock[],
-  modifications: { blockId: string; newDuration?: number; remove?: boolean }[]
+  modifications: BlockModification[]
 ): RoutineBlock[] {
+  // Create maps for quick lookup
+  // Key: originalBlockId (or blockId for non-loop blocks)
   const modMap = new Map(modifications.map((m) => [m.blockId, m]));
-  return blocks
-    .filter((b) => {
-      const mod = modMap.get(b.id);
-      return !mod?.remove;
-    })
-    .map((b) => {
-      const mod = modMap.get(b.id);
-      if (mod?.newDuration && b.type === 'exercise') {
-        return { ...b, duration_secs: mod.newDuration };
+
+  const processBlocks = (blks: RoutineBlock[]): RoutineBlock[] => {
+    const result: RoutineBlock[] = [];
+
+    for (const block of blks) {
+      if (block.type === 'loop') {
+        const loop = block as LoopBlock;
+
+        // Process inner blocks
+        const newInnerBlocks: (ExerciseBlock | BreakBlock)[] = [];
+
+        for (const innerBlock of loop.blocks) {
+          const mod = modMap.get(innerBlock.id);
+
+          // Check if this block should be removed
+          if (mod?.remove) {
+            continue; // Skip this block
+          }
+
+          // Check if duration should be updated
+          if (mod?.newDuration && innerBlock.type === 'exercise') {
+            newInnerBlocks.push({
+              ...innerBlock,
+              duration_secs: mod.newDuration,
+            });
+          } else {
+            newInnerBlocks.push(innerBlock);
+          }
+        }
+
+        // If loop is now empty, don't add it
+        if (newInnerBlocks.length === 0) {
+          continue;
+        }
+
+        // Add the modified loop
+        result.push({
+          ...loop,
+          blocks: newInnerBlocks,
+        });
+      } else {
+        // Non-loop block
+        const mod = modMap.get(block.id);
+
+        // Check if this block should be removed
+        if (mod?.remove) {
+          continue;
+        }
+
+        // Check if duration should be updated
+        if (mod?.newDuration && block.type === 'exercise') {
+          result.push({
+            ...block,
+            duration_secs: mod.newDuration,
+          });
+        } else {
+          result.push(block);
+        }
       }
-      return b;
-    });
+    }
+
+    return result;
+  };
+
+  // Apply modifications
+  const modified = processBlocks(blocks);
+
+  // Normalize (flatten single-iteration loops, etc.)
+  return normalizeBlocks(modified);
 }

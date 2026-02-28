@@ -111,6 +111,7 @@ export function flattenBlocks(
               reps: ex.reps,
               originalBlockId: ex.id,
               loopIteration: i,
+              loopId: loop.id,
               side: ex.side,
             });
           } else {
@@ -121,6 +122,7 @@ export function flattenBlocks(
               duration_secs: br.duration_secs,
               originalBlockId: br.id,
               loopIteration: i,
+              loopId: loop.id,
             });
           }
         }
@@ -195,6 +197,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       actual_duration_secs: 0,
       skipped: true,
       time_added_secs: 0,
+      originalBlockId: currentBlock.originalBlockId,
+      loopIteration: currentBlock.loopIteration,
+      loopId: currentBlock.loopId,
     };
 
     const nextIndex = currentBlockIndex + 1;
@@ -250,6 +255,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         actual_duration_secs: (currentBlock?.duration_secs || 0) + addedTime,
         skipped: false,
         time_added_secs: addedTime,
+        originalBlockId: currentBlock?.originalBlockId,
+        loopIteration: currentBlock?.loopIteration,
+        loopId: currentBlock?.loopId,
       };
 
       const nextIndex = state.currentBlockIndex + 1;
