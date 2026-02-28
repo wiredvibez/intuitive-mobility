@@ -2,55 +2,55 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/Button';
-import { MAX_VIDEO_DURATION_SECS } from '@/lib/utils/validators';
+import { XIcon } from '@/components/ui/Icons';
 
 const MIN_CLIP_SECS = 0.5;
 
-interface VideoTrimmerProps {
-  videoFile: File;
-  onTrim: (trimmedBlob: Blob) => void;
+interface ImportVideoTrimmerProps {
+  videoUrl: string;
+  initialStart?: number;
+  initialEnd?: number;
+  onTrim: (trimmedBlob: Blob, newStart: number, newEnd: number) => void;
   onCancel: () => void;
 }
 
 type DragHandle = 'left' | 'right' | 'center' | null;
 
-export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps) {
+export function ImportVideoTrimmer({
+  videoUrl,
+  initialStart = 0,
+  initialEnd,
+  onTrim,
+  onCancel,
+}: ImportVideoTrimmerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
 
   const [duration, setDuration] = useState(0);
-  const [startTime, setStartTime] = useState(0);
-  const [endTime, setEndTime] = useState(0);
+  const [startTime, setStartTime] = useState(initialStart);
+  const [endTime, setEndTime] = useState(initialEnd || 0);
   const [dragHandle, setDragHandle] = useState<DragHandle>(null);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartTimes, setDragStartTimes] = useState({ start: 0, end: 0 });
   const [processing, setProcessing] = useState(false);
-  const [videoUrl] = useState(() => URL.createObjectURL(videoFile));
-
-  const maxClip = MAX_VIDEO_DURATION_SECS;
 
   useEffect(() => {
-    return () => URL.revokeObjectURL(videoUrl);
-  }, [videoUrl]);
-
-  const handleLoadedMetadata = () => {
     const video = videoRef.current;
     if (!video) return;
 
-    const dur = video.duration;
-    setDuration(dur);
+    const handleLoadedMetadata = () => {
+      const dur = video.duration;
+      setDuration(dur);
+      if (!initialEnd || initialEnd > dur) {
+        setEndTime(dur);
+      }
+    };
 
-    if (dur <= maxClip) {
-      setStartTime(0);
-      setEndTime(dur);
-    } else {
-      setStartTime(0);
-      setEndTime(maxClip);
-    }
-  };
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    return () => video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+  }, [initialEnd]);
 
-  // Loop the preview within the selected range
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -82,32 +82,29 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
   const handleLeftDrag = useCallback(
     (clientX: number) => {
       const raw = clientXToTime(clientX);
-      const minStart = Math.max(0, endTime - maxClip);
       const maxStart = endTime - MIN_CLIP_SECS;
-      const newStart = Math.max(minStart, Math.min(maxStart, raw));
+      const newStart = Math.max(0, Math.min(maxStart, raw));
       setStartTime(newStart);
 
       if (videoRef.current) {
         videoRef.current.currentTime = newStart;
       }
     },
-    [clientXToTime, endTime, maxClip]
+    [clientXToTime, endTime]
   );
 
   const handleRightDrag = useCallback(
     (clientX: number) => {
       const raw = clientXToTime(clientX);
       const minEnd = startTime + MIN_CLIP_SECS;
-      const maxEnd = Math.min(duration, startTime + maxClip);
-      const newEnd = Math.max(minEnd, Math.min(maxEnd, raw));
+      const newEnd = Math.max(minEnd, Math.min(duration, raw));
       setEndTime(newEnd);
 
       if (videoRef.current) {
-        // Show end frame when dragging right handle
         videoRef.current.currentTime = newEnd;
       }
     },
-    [clientXToTime, startTime, duration, maxClip]
+    [clientXToTime, startTime, duration]
   );
 
   const handleCenterDrag = useCallback(
@@ -124,7 +121,6 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
       let newStart = dragStartTimes.start + deltaTime;
       let newEnd = dragStartTimes.end + deltaTime;
 
-      // Clamp to bounds
       if (newStart < 0) {
         newStart = 0;
         newEnd = clipLength;
@@ -138,7 +134,6 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
       setEndTime(newEnd);
 
       if (videoRef.current) {
-        // Show start frame when moving the selection
         videoRef.current.currentTime = newStart;
       }
     },
@@ -151,11 +146,10 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
       setDragHandle(handle);
       setDragStartX(e.clientX);
       setDragStartTimes({ start: startTime, end: endTime });
-      
+
       if (handle === 'left') handleLeftDrag(e.clientX);
       else if (handle === 'right') handleRightDrag(e.clientX);
-      // Center doesn't need initial drag call - just captures initial position
-      
+
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
     }
   };
@@ -227,10 +221,9 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
       }, clipDuration * 1000 + 200);
 
       const blob = await done;
-      onTrim(blob);
+      onTrim(blob, startTime, endTime);
     } catch (err) {
       console.error('Trim failed:', err);
-      onTrim(videoFile);
     } finally {
       setProcessing(false);
     }
@@ -240,13 +233,13 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
   const selectionWidth = duration > 0 ? ((endTime - startTime) / duration) * 100 : 100;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col overflow-hidden max-h-[100dvh] pt-safe-t pb-safe-b">
+    <div className="fixed inset-0 z-[70] bg-background flex flex-col overflow-hidden pt-safe-t pb-safe-b">
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border">
         <button onClick={onCancel} className="text-fg-muted hover:text-foreground p-1">
-          ✕
+          <XIcon size={18} />
         </button>
-        <span className="text-sm font-semibold">Trim Video</span>
+        <span className="text-sm font-semibold">Edit Clip</span>
         <div className="w-6" />
       </div>
 
@@ -259,12 +252,12 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
           playsInline
           autoPlay
           loop
-          onLoadedMetadata={handleLoadedMetadata}
+          crossOrigin="anonymous"
           className="max-w-full max-h-full rounded-lg object-contain"
         />
       </div>
 
-      {/* Timeline - Instagram style */}
+      {/* Timeline */}
       <div className="flex-shrink-0 px-4 py-4 space-y-3">
         <div
           ref={timelineRef}
@@ -274,16 +267,13 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
           onPointerLeave={handlePointerUp}
           className="relative h-14 bg-bg-elevated rounded-xl overflow-hidden touch-none select-none"
         >
-          {/* Full track - dimmed */}
           <div className="absolute inset-0 bg-fg-subtle/20" />
 
-          {/* Left dimmed region */}
           <div
             className="absolute top-0 bottom-0 left-0 bg-black/40"
             style={{ width: `${selectionLeft}%` }}
           />
 
-          {/* Selection - highlighted */}
           <div
             className="absolute top-0 bottom-0 border-y-2 border-accent bg-accent/25"
             style={{
@@ -291,7 +281,6 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
               width: `${selectionWidth}%`,
             }}
           >
-            {/* Left handle */}
             <div
               data-handle="left"
               className="absolute left-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize hover:bg-accent/30 active:bg-accent/40 transition-colors rounded-l z-10"
@@ -299,13 +288,11 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
             >
               <div className="w-1 h-8 bg-white rounded-full shadow pointer-events-none" />
             </div>
-            {/* Center drag area */}
             <div
               data-handle="center"
               className="absolute left-4 right-4 top-0 bottom-0 cursor-grab active:cursor-grabbing hover:bg-accent/10 transition-colors"
               aria-label="Move selection"
             />
-            {/* Right handle */}
             <div
               data-handle="right"
               className="absolute right-0 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize hover:bg-accent/30 active:bg-accent/40 transition-colors rounded-r z-10"
@@ -315,14 +302,12 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
             </div>
           </div>
 
-          {/* Right dimmed region */}
           <div
             className="absolute top-0 right-0 bottom-0 bg-black/40"
             style={{ width: `${100 - selectionLeft - selectionWidth}%` }}
           />
         </div>
 
-        {/* Time labels */}
         <div className="flex justify-between text-xs text-fg-muted">
           <span>{formatTime(startTime)}</span>
           <span className="text-accent font-medium">
@@ -332,11 +317,10 @@ export function VideoTrimmer({ videoFile, onTrim, onCancel }: VideoTrimmerProps)
         </div>
 
         <Button fullWidth onClick={handleTrim} loading={processing}>
-          Done
+          Apply Changes
         </Button>
       </div>
 
-      {/* Hidden canvas for encoding */}
       <canvas ref={canvasRef} className="hidden" />
     </div>
   );

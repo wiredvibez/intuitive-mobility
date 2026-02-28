@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import { useAuth } from '@/providers/AuthProvider';
@@ -22,6 +22,8 @@ import { MemoryCapture, type CapturedMedia } from './MemoryCapture';
 import { formatDuration } from '@/lib/utils/formatters';
 import { Timestamp } from 'firebase/firestore';
 
+const SAVE_RATE_LIMIT_MS = 3000;
+
 export function WorkoutSummary() {
   const router = useRouter();
   const { firebaseUser } = useAuth();
@@ -40,6 +42,8 @@ export function WorkoutSummary() {
   const [saving, setSaving] = useState(false);
   const [modsSaving, setModsSaving] = useState(false);
   const [modsHandled, setModsHandled] = useState(false);
+  const lastSaveTimeRef = useRef<number>(0);
+  const saveInProgressRef = useRef<boolean>(false);
 
   const hasModifications = completedBlocks.some(
     (b) => b.time_added_secs > 0 || b.skipped
@@ -64,6 +68,12 @@ export function WorkoutSummary() {
       return prev.filter((c) => c.id !== id);
     });
   }, []);
+
+  // If no workout data, redirect to dashboard
+  if (!workoutId || !routineId) {
+    router.push('/dashboard');
+    return null;
+  }
 
   const handleSaveModifications = async (
     mods: { blockId: string; newDuration?: number; remove?: boolean }[]
@@ -90,6 +100,20 @@ export function WorkoutSummary() {
 
   const handleDone = async () => {
     if (!firebaseUser || !workoutId || !routineId) return;
+    
+    // Rate limiting check
+    const now = Date.now();
+    if (saveInProgressRef.current) {
+      addToast('Save in progress...', 'info');
+      return;
+    }
+    if (now - lastSaveTimeRef.current < SAVE_RATE_LIMIT_MS) {
+      addToast('Please wait before saving again', 'info');
+      return;
+    }
+    
+    lastSaveTimeRef.current = now;
+    saveInProgressRef.current = true;
     setSaving(true);
 
     try {
@@ -134,10 +158,10 @@ export function WorkoutSummary() {
         );
       }
 
-      // Clean up active workout
+      // Clean up active workout - always delete, even if all skipped
       await deleteWorkout(firebaseUser.uid, workoutId);
 
-      // Reset player
+      // Reset player state
       resetPlayer();
 
       // Clean up preview URLs
@@ -149,11 +173,12 @@ export function WorkoutSummary() {
       console.error('Failed to save workout:', err);
       addToast('Failed to save workout', 'error');
       setSaving(false);
+      saveInProgressRef.current = false;
     }
   };
 
   return (
-    <div className="min-h-screen p-4 pb-32">
+    <div className="min-h-screen p-4 pb-32 pt-safe-t">
       {/* Header */}
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}

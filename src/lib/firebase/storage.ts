@@ -11,10 +11,26 @@ export async function uploadExerciseMedia(
   file: File | Blob,
   exerciseId: string
 ): Promise<{ url: string; path: string }> {
-  const ext = file instanceof File ? file.name.split('.').pop() : 'mp4';
+  // Determine extension from file name or MIME type
+  let ext = 'mp4';
+  if (file instanceof File) {
+    ext = file.name.split('.').pop() || 'mp4';
+  } else if (file.type) {
+    // Extract extension from MIME type (e.g., 'video/webm' -> 'webm')
+    const mimeExt = file.type.split('/')[1]?.split(';')[0];
+    if (mimeExt) ext = mimeExt;
+  }
+  
   const path = `exercises/${userId}/${exerciseId}.${ext}`;
   const storageRef = ref(storage, path);
-  await uploadBytes(storageRef, file);
+  
+  // Add timeout to prevent hanging
+  const uploadPromise = uploadBytes(storageRef, file);
+  const timeoutPromise = new Promise<never>((_, reject) => 
+    setTimeout(() => reject(new Error('Upload timeout')), 60000)
+  );
+  
+  await Promise.race([uploadPromise, timeoutPromise]);
   const url = await fbGetDownloadURL(storageRef);
   return { url, path };
 }

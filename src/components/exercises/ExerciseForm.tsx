@@ -132,7 +132,16 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
   };
 
   const handleSave = async () => {
-    if (!validate() || !firebaseUser) return;
+    if (!firebaseUser) {
+      addToast('Please sign in to save', 'error');
+      return;
+    }
+    
+    if (!validate()) {
+      addToast('Please fix the errors above', 'error');
+      return;
+    }
+    
     setSaving(true);
 
     try {
@@ -140,9 +149,10 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
       const exerciseId = exercise?.id || Date.now().toString(36);
 
       if (mediaFile) {
+        addToast('Uploading video...', 'info');
         const upload = await uploadExerciseMedia(
           firebaseUser.uid,
-          mediaFile instanceof File ? mediaFile : new File([mediaFile], 'trimmed.webm'),
+          mediaFile,
           exerciseId
         );
         finalMediaUrl = upload.url;
@@ -172,7 +182,8 @@ export function ExerciseForm({ exercise, onSuccess, onCancel }: ExerciseFormProp
       }
     } catch (err) {
       console.error('Save failed:', err);
-      addToast('Failed to save exercise', 'error');
+      const message = err instanceof Error ? err.message : 'Failed to save exercise';
+      addToast(message, 'error');
     } finally {
       setSaving(false);
     }

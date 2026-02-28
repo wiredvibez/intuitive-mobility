@@ -20,6 +20,7 @@ import {
 import { validateRoutineName } from '@/lib/utils/validators';
 import { getExerciseMediaUrl } from '@/lib/firebase/storage';
 import { DURATION_PRESETS } from '@/lib/types';
+import { useBackgroundTaskStore, runBackgroundTask } from '@/lib/stores/backgroundTaskStore';
 import type {
   Routine,
   RoutineBlock,
@@ -214,31 +215,51 @@ export function RoutineBuilder({ routine }: RoutineBuilderProps) {
       return;
     }
     if (!firebaseUser) return;
-    setSaving(true);
 
-    try {
-      const data = {
-        name: name.trim(),
-        blocks,
-        prep_time_secs: prepTime,
-        cooldown_time_secs: cooldownTime,
-        total_duration_secs: totalDuration,
-      };
-
-      if (routine) {
-        await updateRoutine(firebaseUser.uid, routine.id, data);
-        addToast('Routine updated', 'success');
-      } else {
-        await createRoutine(firebaseUser.uid, data);
-        addToast('Routine created', 'success');
-      }
-      router.push('/dashboard');
-    } catch (err) {
-      console.error('Save failed:', err);
-      addToast('Failed to save routine', 'error');
-    } finally {
-      setSaving(false);
+    // Check if already saving
+    const hasActiveTask = useBackgroundTaskStore.getState().hasActiveTask('routine_save');
+    if (hasActiveTask) {
+      addToast('Save already in progress', 'info');
+      return;
     }
+
+    setSaving(true);
+    addToast('Saving routine...', 'info');
+
+    const data = {
+      name: name.trim(),
+      blocks,
+      prep_time_secs: prepTime,
+      cooldown_time_secs: cooldownTime,
+      total_duration_secs: totalDuration,
+    };
+
+    // Run save in background - navigate immediately
+    router.push('/dashboard');
+
+    await runBackgroundTask(
+      {
+        id: `routine_save_${Date.now()}`,
+        type: 'routine_save',
+        message: routine ? 'Updating routine...' : 'Creating routine...',
+      },
+      async () => {
+        if (routine) {
+          await updateRoutine(firebaseUser!.uid, routine.id, data);
+        } else {
+          await createRoutine(firebaseUser!.uid, data);
+        }
+      },
+      () => {
+        addToast(routine ? 'Routine updated' : 'Routine created', 'success');
+      },
+      (error) => {
+        console.error('Save failed:', error);
+        addToast('Failed to save routine', 'error');
+      }
+    );
+
+    setSaving(false);
   };
 
   // Only allow Reorder on top-level non-loop blocks

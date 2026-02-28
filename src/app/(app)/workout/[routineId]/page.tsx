@@ -102,7 +102,7 @@ export default function WorkoutPage() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-background z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-background z-50 flex items-center justify-center pt-safe-t pb-safe-b">
         <div className="text-center space-y-4">
           <Spinner size={32} />
           <p className="text-sm text-fg-muted">Loading workout...</p>
@@ -113,7 +113,7 @@ export default function WorkoutPage() {
 
   if (error) {
     return (
-      <div className="fixed inset-0 bg-background z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-background z-50 flex items-center justify-center pt-safe-t pb-safe-b">
         <p className="text-sm text-danger">{error}</p>
       </div>
     );

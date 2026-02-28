@@ -151,8 +151,17 @@ export function WorkoutPlayer() {
           ? 'Get Ready'
           : 'Cooldown';
 
+  // Calculate remaining reps for repeat-type exercises
+  const isRepeatExercise = currentBlock?.type === 'exercise' && currentBlock.exercise_type === 'repeat';
+  const totalReps = currentBlock?.reps || 0;
+  const totalDuration = currentBlock?.duration_secs || 0;
+  const timePerRep = totalReps > 0 && totalDuration > 0 ? totalDuration / totalReps : 0;
+  const remainingReps = isRepeatExercise && timePerRep > 0
+    ? Math.ceil(remainingSeconds / timePerRep)
+    : 0;
+
   return (
-    <div className="fixed inset-0 bg-background z-50 flex flex-col">
+    <div className="fixed inset-0 bg-background z-50 flex flex-col pt-safe-t">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <button
@@ -180,12 +189,23 @@ export function WorkoutPlayer() {
       {/* Media */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
         {currentBlock?.type === 'exercise' && currentBlock.media_url ? (
-          <div className="w-full max-w-[200px] aspect-[9/16] rounded-2xl overflow-hidden">
+          <div className="relative w-full max-w-[200px] aspect-[9/16] rounded-2xl overflow-hidden">
             <MediaPlayer
               mediaUrl={currentBlock.media_url}
               mediaType={currentBlock.media_type}
               className="w-full h-full"
             />
+            {/* Reps overlay for repeat exercises */}
+            {isRepeatExercise && remainingReps > 0 && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/70 backdrop-blur-sm rounded-full px-4 py-2 flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold text-white tabular-nums">
+                  {remainingReps}
+                </span>
+                <span className="text-xs text-white/70">
+                  rep{remainingReps !== 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="w-32 h-32 rounded-full bg-bg-elevated flex items-center justify-center">

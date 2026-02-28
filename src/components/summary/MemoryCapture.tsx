@@ -32,12 +32,18 @@ export function MemoryCapture({ captures, onCapture, onRemove }: MemoryCapturePr
   const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode },
+        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // Ensure video plays after srcObject is set
+        try {
+          await videoRef.current.play();
+        } catch (playErr) {
+          console.warn('Video autoplay failed:', playErr);
+        }
       }
       setCameraOpen(true);
     } catch (err) {
@@ -75,11 +81,25 @@ export function MemoryCapture({ captures, onCapture, onRemove }: MemoryCapturePr
   const takePhoto = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas) return;
+    if (!video || !canvas) {
+      console.error('Video or canvas ref not available');
+      return;
+    }
+    
+    // Check if video has valid dimensions
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      console.error('Video not ready - dimensions are 0');
+      return;
+    }
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error('Could not get canvas context');
+      return;
+    }
+    
     ctx.drawImage(video, 0, 0);
 
     canvas.toBlob((blob) => {
@@ -91,6 +111,8 @@ export function MemoryCapture({ captures, onCapture, onRemove }: MemoryCapturePr
           previewUrl: URL.createObjectURL(blob),
         };
         onCapture(media);
+      } else {
+        console.error('Failed to create blob from canvas');
       }
     }, 'image/jpeg', 0.85);
   }, [onCapture]);
@@ -208,6 +230,10 @@ export function MemoryCapture({ captures, onCapture, onRemove }: MemoryCapturePr
             autoPlay
             playsInline
             muted
+            onLoadedMetadata={() => {
+              // Ensure video starts playing when metadata is loaded
+              videoRef.current?.play().catch(console.warn);
+            }}
             className="w-full aspect-[4/3] object-cover"
           />
 

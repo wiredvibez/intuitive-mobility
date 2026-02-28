@@ -33,6 +33,12 @@ export function PendingVideoProcessCard({ job }: PendingVideoProcessCardProps) {
   const isReady = ['await_approve', 'incomplete_approve'].includes(job.status);
   const isError = job.status === 'error';
 
+  // Get pending exercise count and Instagram handle for ready state
+  const pendingCount = job.exercises.filter((e) => e.status === 'pending').length;
+  const instagramHandle = job.instagram_metadata?.author?.username
+    ? `@${job.instagram_metadata.author.username}`
+    : null;
+
   const isStuck = isProcessing && (() => {
     if (!job.updated_at) return false;
     const updatedMs = job.updated_at instanceof Timestamp
@@ -58,12 +64,26 @@ export function PendingVideoProcessCard({ job }: PendingVideoProcessCardProps) {
     }
   };
 
+  // Build the ready message with count and handle
+  const getReadyMessage = () => {
+    if (!isReady) return null;
+    const exerciseWord = pendingCount === 1 ? 'exercise' : 'exercises';
+    if (instagramHandle) {
+      return `${pendingCount} ${exerciseWord} from ${instagramHandle} ready for review`;
+    }
+    return `${pendingCount} ${exerciseWord} ready for review`;
+  };
+
   return (
     <div className="mb-4 rounded-xl bg-bg-card border border-border p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">
-            {isStuck ? 'Import timed out' : (STATUS_LABELS[job.status] ?? job.status)}
+            {isStuck
+              ? 'Import timed out'
+              : isReady
+                ? getReadyMessage()
+                : (STATUS_LABELS[job.status] ?? job.status)}
           </p>
           {isError && job.status_message && (
             <p className="text-xs text-danger mt-0.5">{job.status_message}</p>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import { useAuth } from '@/providers/AuthProvider';
@@ -13,6 +13,36 @@ import { Spinner } from '@/components/ui/Spinner';
 import type { Workout } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 
+const GREETINGS = [
+  '[Name], about fucking time.',
+  '[Name] sweat is sexy',
+  'Finally back are we?',
+  '[Name], Abs look good on you!',
+  "Happy to see you're done procrastinating",
+  "[Name], Let's get down to moving",
+  'Look good naked, [Name].',
+  'Done being lazy?',
+  'Sweat looks good, [Name].',
+  'Lift heavy shit.',
+  'The game of gains',
+  'Time to get hot.',
+  '[Name] have you stretched today?',
+  '[Name] how are your adductors feeling?',
+  'Make them stare, [Name].',
+  'Stop stalling, start sweating.',
+  '[Name], quit the bitching.',
+  "Let's build that ass.",
+  'Finally off the couch?',
+  'Get your pump on.',
+  'Bored of being soft?',
+  "Let's get aggressively sweaty.",
+  'Skip the excuses, [Name].',
+  'Welcome back, slacker.',
+  '[Name], time to suffer.',
+  'Ready to look dangerous?',
+  'Move your ass, [Name].',
+];
+
 export default function DashboardPage() {
   const { firebaseUser, profile } = useAuth();
   const { routines, loading } = useRoutines();
@@ -21,12 +51,25 @@ export default function DashboardPage() {
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [checkingWorkout, setCheckingWorkout] = useState(true);
 
+  const greeting = useMemo(() => {
+    const randomIndex = Math.floor(Math.random() * GREETINGS.length);
+    return GREETINGS[randomIndex];
+  }, []);
+
   useEffect(() => {
     if (!firebaseUser) return;
     const check = async () => {
       try {
         const workout = await getActiveWorkout(firebaseUser.uid);
         if (!workout) {
+          setCheckingWorkout(false);
+          return;
+        }
+
+        // Validate workout has required data
+        if (!workout.routine_id || !workout.custom_name) {
+          console.warn('Invalid workout found, cleaning up:', workout.id);
+          await deleteWorkout(firebaseUser.uid, workout.id);
           setCheckingWorkout(false);
           return;
         }
@@ -85,9 +128,8 @@ export default function DashboardPage() {
         transition={{ duration: 0.3 }}
         className="mb-8"
       >
-        <p className="text-fg-subtle text-sm mb-0.5">Ready to train,</p>
-        <h1 className="font-display font-bold text-5xl leading-none tracking-tight">
-          {profile?.name || 'Athlete'}
+        <h1 className="font-display font-bold text-3xl leading-tight tracking-tight">
+          {greeting.replace(/\[Name\]/g, profile?.name || 'Athlete')}
         </h1>
       </motion.div>
 
